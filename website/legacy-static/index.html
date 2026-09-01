@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zephyr — Autonomous Electric Scooter</title>
+  <meta name="description" content="Zephyr: an autonomous electric scooter by Joshua Chilukuri and Trevor Bedson." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ============ TASKBAR ============ -->
+  <header class="taskbar" id="taskbar">
+    <a class="brand" href="#top">Zephyr<span class="brand-mark">&nbsp;⌁</span></a>
+    <nav class="nav" id="nav">
+      <a href="#overview"><span class="nav-num">01</span>Project Overview</a>
+      <a href="#autonomy"><span class="nav-num">02</span>Autonomous AI Implementation</a>
+      <a href="#design"><span class="nav-num">03</span>Electric Scooter Design</a>
+      <a href="#app"><span class="nav-num">04</span>Zephyr Mobile App</a>
+    </nav>
+    <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu" aria-expanded="false">
+      <span></span><span></span>
+    </button>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero" id="top">
+    <p class="hero-kicker">Fig. 00 — An autonomous mobility project</p>
+    <h1 class="hero-title">ZEPHYR</h1>
+    <p class="hero-sub"><em>n.</em>&nbsp; a soft, gentle breeze — reimagined as a self-driving electric scooter.</p>
+
+    <!-- White line-drawn scooter silhouette -->
+    <div class="scooter-wrap" aria-hidden="true">
+      <svg class="scooter" viewBox="0 0 640 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- ground -->
+        <line class="draw d8" x1="50" y1="372" x2="590" y2="372" stroke-dasharray="2 10" />
+        <!-- wind / zephyr lines -->
+        <path class="draw d7" d="M20 260 Q60 250 95 262" />
+        <path class="draw d7" d="M8 290 Q55 278 90 292" />
+        <path class="draw d7" d="M28 320 Q62 312 92 322" />
+        <!-- rear wheel -->
+        <circle class="draw d1" cx="140" cy="320" r="48" />
+        <circle class="draw d2" cx="140" cy="320" r="20" />
+        <circle class="dot d3" cx="140" cy="320" r="4" fill="currentColor" stroke="none" />
+        <!-- rear fender -->
+        <path class="draw d2" d="M92 308 A 56 56 0 0 1 192 296" />
+        <!-- deck -->
+        <path class="draw d1" d="M168 264 L412 264 L424 280 L160 280 Z" />
+        <!-- battery line under deck -->
+        <line class="draw d4" x1="210" y1="288" x2="360" y2="288" />
+        <!-- front fork -->
+        <path class="draw d2" d="M488 268 L500 320" />
+        <path class="draw d2" d="M508 262 L512 300" />
+        <!-- front wheel -->
+        <circle class="draw d1" cx="500" cy="320" r="48" />
+        <circle class="draw d2" cx="500" cy="320" r="20" />
+        <circle class="dot d3" cx="500" cy="320" r="4" fill="currentColor" stroke="none" />
+        <!-- stem -->
+        <path class="draw d2" d="M414 266 L488 268" />
+        <path class="draw d3" d="M488 268 L452 74" />
+        <path class="draw d3" d="M500 266 L464 72" />
+        <!-- handlebar -->
+        <line class="draw d4" x1="392" y1="66" x2="522" y2="62" />
+        <path class="draw d4" d="M392 60 L420 59 L420 72 L392 73 Z" />
+        <path class="draw d4" d="M494 58 L522 57 L522 68 L494 69 Z" />
+        <!-- display -->
+        <rect class="draw d5" x="438" y="82" width="42" height="26" rx="4" transform="rotate(6 459 95)" />
+        <!-- sensor pod (lidar) -->
+        <circle class="draw d5" cx="478" cy="158" r="13" />
+        <line class="draw d5" x1="470" y1="148" x2="486" y2="168" />
+        <!-- sensor arcs -->
+        <path class="draw d6 pulse p1" d="M502 138 A 34 34 0 0 1 502 178" />
+        <path class="draw d6 pulse p2" d="M522 124 A 56 56 0 0 1 522 192" />
+        <path class="draw d6 pulse p3" d="M542 110 A 80 80 0 0 1 542 206" />
+        <!-- headlight beam -->
+        <line class="draw d6" x1="516" y1="240" x2="576" y2="232" />
+        <line class="draw d6" x1="518" y1="252" x2="580" y2="252" />
+      </svg>
+    </div>
+
+    <!-- Our Other Work -->
+    <div class="other-work">
+      <p class="other-work-label">Our Other Work</p>
+      <div class="other-work-icons">
+        <a class="person" href="https://joshuachilukuri.com" target="_blank" rel="noopener" data-name="Joshua Chilukuri" aria-label="Joshua Chilukuri">
+          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="15" r="6.5" />
+            <path d="M8 33 C8 25.5 13 22.5 20 22.5 C27 22.5 32 25.5 32 33" />
+          </svg>
+        </a>
+        <a class="person" href="https://bedson.tech" target="_blank" rel="noopener" data-name="Trevor Bedson" aria-label="Trevor Bedson">
+          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="15" r="6.5" />
+            <path d="M8 33 C8 25.5 13 22.5 20 22.5 C27 22.5 32 25.5 32 33" />
+            <path d="M13 11 Q20 5 27 11" />
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <a class="scroll-cue" href="#overview">Scroll<span class="scroll-line"></span></a>
+  </section>
+
+  <!-- ============ 01 — PROJECT OVERVIEW ============ -->
+  <section class="section light" id="overview">
+    <div class="section-inner reveal">
+      <p class="fig">Fig. 01</p>
+      <h2><span class="sec-num">01 —</span> Project Overview</h2>
+      <p class="lede">Zephyr is a two-person exploration into what happens when a humble electric
+        scooter learns to think for itself. Summon it from across campus, ride it wherever you like,
+        and let it quietly return itself to the nearest charging dock.</p>
+      <p class="body-copy">Built from the ground up — frame, drivetrain, perception stack, and
+        companion app — Zephyr is equal parts robotics testbed and daily commuter. This page is a
+        living document of the project; the copy below is placeholder while we write up the real
+        results.</p>
+      <div class="stat-grid">
+        <div class="stat"><span class="stat-value">25 km</span><span class="stat-label">Range per charge</span></div>
+        <div class="stat"><span class="stat-value">L4</span><span class="stat-label">Target autonomy (geofenced)</span></div>
+        <div class="stat"><span class="stat-value">3</span><span class="stat-label">Sensor modalities</span></div>
+        <div class="stat"><span class="stat-value">2</span><span class="stat-label">Engineers, many late nights</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 02 — AUTONOMOUS AI IMPLEMENTATION ============ -->
+  <section class="section dark" id="autonomy">
+    <div class="section-inner reveal">
+      <p class="fig">Fig. 02</p>
+      <h2><span class="sec-num">02 —</span> Autonomous AI Implementation</h2>
+      <p class="lede">A lightweight perception-planning-control loop, tuned to run on hardware that
+        fits under a deck plate.</p>
+      <div class="cols">
+        <div class="col">
+          <h3>Perception</h3>
+          <p>Camera and lidar streams are fused into a local occupancy grid. Placeholder: notes on
+            the vision model, obstacle classification, and how Zephyr tells a curb from a shadow.</p>
+        </div>
+        <div class="col">
+          <h3>Planning</h3>
+          <p>A hybrid A* planner proposes paths; a safety layer vetoes anything that gets within a
+            comfortable margin of pedestrians. Placeholder: replanning cadence and edge cases.</p>
+        </div>
+        <div class="col">
+          <h3>Control</h3>
+          <p>Steering and throttle are closed-loop at 50 Hz with a graceful fallback: when
+            confidence drops, Zephyr simply stops and phones home. Placeholder: controller details.</p>
+        </div>
+      </div>
+      <div class="tags">
+        <span>Computer Vision</span><span>SLAM</span><span>Path Planning</span>
+        <span>Sensor Fusion</span><span>Embedded</span><span>ROS 2</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 03 — ELECTRIC SCOOTER DESIGN ============ -->
+  <section class="section light" id="design">
+    <div class="section-inner reveal">
+      <p class="fig">Fig. 03</p>
+      <h2><span class="sec-num">03 —</span> Electric Scooter Design</h2>
+      <p class="lede">Off-the-shelf where it can be, custom where it must be. The frame carries the
+        compute; the compute never gets in the rider's way.</p>
+      <table class="spec-table">
+        <tbody>
+          <tr><th>Motor</th><td>500 W rear-hub BLDC (placeholder)</td></tr>
+          <tr><th>Battery</th><td>48 V 13 Ah lithium-ion, swappable (placeholder)</td></tr>
+          <tr><th>Frame</th><td>6061 aluminum, reinforced steering column (placeholder)</td></tr>
+          <tr><th>Steering</th><td>Servo-actuated column for autonomous mode (placeholder)</td></tr>
+          <tr><th>Sensors</th><td>Solid-state lidar, stereo camera, wheel encoders (placeholder)</td></tr>
+          <tr><th>Compute</th><td>Embedded SoC under the deck, passively cooled (placeholder)</td></tr>
+        </tbody>
+      </table>
+      <p class="body-copy">Placeholder: design write-up covering weight distribution with the
+        sensor mast, waterproofing, and why the kickstand turned out to be the hardest part.</p>
+    </div>
+  </section>
+
+  <!-- ============ 04 — ZEPHYR MOBILE APP ============ -->
+  <section class="section dark" id="app">
+    <div class="section-inner reveal">
+      <p class="fig">Fig. 04</p>
+      <h2><span class="sec-num">04 —</span> Zephyr Mobile App</h2>
+      <div class="app-layout">
+        <div class="app-copy">
+          <p class="lede">The remote control you never need to look at twice.</p>
+          <ul class="feature-list">
+            <li><strong>Summon.</strong> Drop a pin; Zephyr rides to you. (Placeholder)</li>
+            <li><strong>Live map.</strong> Watch it navigate in real time. (Placeholder)</li>
+            <li><strong>Battery &amp; health.</strong> Charge state, diagnostics, firmware. (Placeholder)</li>
+            <li><strong>Ride log.</strong> Distance, routes, and the occasional detour. (Placeholder)</li>
+          </ul>
+          <p class="body-copy">Placeholder: notes on the app stack, the telemetry link, and the
+            remote-stop safety button.</p>
+        </div>
+        <div class="phone" aria-hidden="true">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <p class="phone-brand">Zephyr ⌁</p>
+            <div class="phone-map">
+              <span class="phone-dot"></span>
+              <svg viewBox="0 0 120 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 80 Q40 70 55 45 T110 12" stroke-dasharray="4 5" />
+              </svg>
+            </div>
+            <div class="phone-row"><span>Battery</span><span>87%</span></div>
+            <div class="phone-row"><span>Status</span><span>En&nbsp;route</span></div>
+            <div class="phone-btn">Summon</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <p class="footer-title">Zephyr&nbsp;⌁</p>
+    <p>A project by
+      <a href="https://joshuachilukuri.com" target="_blank" rel="noopener">Joshua Chilukuri</a> &amp;
+      <a href="https://bedson.tech" target="_blank" rel="noopener">Trevor Bedson</a>
+    </p>
+    <p class="footer-fine">© 2026 · Fig. 05 — colophon: set in Times, drawn in strokes of white.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
