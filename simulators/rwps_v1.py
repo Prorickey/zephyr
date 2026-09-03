@@ -1,5 +1,8 @@
 import math
 
+# This simulation takes a force applied at the location of the reaction wheel
+# and simulates the full body of the scooter
+
 # Scooter Pendulum
 m1 = 2.0 # (kilograms) mass of the handlebars
 l1 = 0.3 # (meters) length from fulcrum of reaction wheel (where force is applied)
