@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 # This simulation takes a force applied at the location of the reaction wheel
 # and simulates the full body of the scooter
@@ -15,17 +16,28 @@ APPLIED_FORCE = 5.886 # (N)
 dt = 0.01 # (seconds)
 SIM_TIME = 10.0 # (seconds)
 
-theta = STARTING_ANGLE
-vel = 0.0 # (meter/second)
+# state = [theta (rads), angular velocity (rad/second)]
+Y = np.array([STARTING_ANGLE, 0.0])
+
+def rhs(Y):
+    "Return the derivatives at the right hand side of the curve being approximated"
+    theta, vel = Y 
+    accel = ((l2*APPLIED_FORCE)/(l1*m1)) - (g*math.sin(theta))
+    return np.array([vel / l1, accel]) # [angular velocity (rad/s), acceleration (meter/s^2)]
+
+def rk4_step(Y, h):
+    "Fourth Order Runge-Kutta Integration"
+    k1 = rhs(Y)
+    k2 = rhs(Y + h/2 * k1)
+    k3 = rhs(Y + h/2 * k2)
+    k4 = rhs(Y + h*k3)
+
+    return Y + (h/6)*(k1+(2*k2)+(2*k3)+k4)
 
 for t in range(int(SIM_TIME/dt)):
+    Y = rk4_step(Y, dt)
 
-    # calculate accel in meter/second^2
-    a = ((l2*APPLIED_FORCE)/(l1*m1)) - (g*math.sin(theta))
+    theta, w = Y
+    accel = ((l2*APPLIED_FORCE)/(l1*m1)) - (g*math.sin(theta))
 
-    vel = a*dt + vel # calculate velocity 
-    w = vel / l1 # convert to angular velocity (rad/s)
-
-    theta = w*dt + theta # adjust theta
-
-    print(f"time (s): {t} accel (m/s^2): {a} angular velocity (rad/s): {w} theta (rad): {theta}")
+    print(f"time (s): {t} accel (m/s^2): {accel} angular velocity (rad/s): {w} theta (rad): {theta}")
