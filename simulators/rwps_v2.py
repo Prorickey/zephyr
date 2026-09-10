@@ -2,9 +2,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.animation as animation
-
-# This simulation takes an applied current to the reaction wheel motor
-# and simulates the full body of the scooter
+from matplotlib.widgets import Slider, Button
 
 class ScooterReversePendulumReactionWheel():
     """
@@ -41,6 +39,10 @@ class ScooterReversePendulumReactionWheel():
 
         self.x_history = []
         self.y_history = []
+        self.theta_history = []
+        self.w_history = []
+        self.accel_history = []
+        self.current_history = []
 
         self.steps = 0
 
@@ -70,6 +72,10 @@ class ScooterReversePendulumReactionWheel():
     
         self.x_history.append(self.stem_length * math.sin(theta))
         self.y_history.append(-self.stem_length * math.cos(theta))
+        self.theta_history.append(theta)
+        self.w_history.append(w)
+        self.accel_history.append(self.acceleration(applied_current, theta))
+        self.current_history.append(applied_current)
 
         self.steps += 1
 
@@ -92,49 +98,99 @@ class ScooterReversePendulumReactionWheel():
 
     def show_plot(self):
         # Set up the Matplotlib Figure and Axis
-        fig, ax = plt.subplots(figsize=(6, 6))
+        fig, ax = plt.subplots(figsize=(6, 7))
+        fig.subplots_adjust(bottom=0.18)
         ax.set_xlim(-self.stem_length * 1.5, self.stem_length * 1.5)
         ax.set_ylim(-self.stem_length * 1.5, self.stem_length * 1.5)
         ax.set_aspect('equal')
         ax.grid(True, linestyle='--', alpha=0.5)
         ax.set_title("Scooter Simulation", fontsize=14)
 
-        # Create the visual elements that will be updated in the animation loop
+        # Gravity forces (N), scaled so the largest arrow is half the stem length
+        handlebar_force = self.handlebar_mass * self.gravity
+        rw_force = self.reaction_wheel_mass * self.gravity
+        # Motor torque expressed as an equivalent tangential force at the reaction wheel (F = T / r)
+        motor_forces = [c * self.motor_kt / self.length_off_body_of_reaction_wheel for c in self.current_history]
+        max_motor_force = max(abs(f) for f in motor_forces)
+
+        arrow_scale = 0.5 * self.stem_length / max(handlebar_force, rw_force, max_motor_force)
+        rw_ratio = self.length_off_body_of_reaction_wheel / self.stem_length
+
+        # Create the visual elements that will be updated each frame
         line, = ax.plot([], [], 'o-', lw=3, color='#1f77b4', markersize=8)  # Pendulum rod and bob
         trace, = ax.plot([], [], '-', lw=1, color='orange', alpha=0.6)      # Trace path of the bob
-
-        def init():
-            line.set_data([], [])
-            trace.set_data([], [])
-            return line, trace
-
-        # Animation function: called sequentially for each frame `i`
-        def animate(i):
-            # Segment representing the rod from the origin (0,0) to the bob (x, y)
-            this_x = [0, self.x_history[i]]
-            this_y = [0, self.y_history[i]]
-            line.set_data(this_x, this_y)
-            
-            # Update the fading history trace path
-            trace.set_data(self.x_history[:i], self.y_history[:i])
-            
-            return line, trace
-
-        animation.FuncAnimation(
-            fig, animate, init_func=init, frames=int(self.steps), 
-            interval=self.dt*1000, blit=True, repeat=True
+        rw_marker, = ax.plot([], [], 'o', color='#2ca02c', markersize=12, label='Reaction wheel')
+        gravity_arrows = ax.quiver(
+            [0, 0], [0, 0], [0, 0], [-handlebar_force * arrow_scale, -rw_force * arrow_scale],
+            color=['#d62728', '#9467bd'], angles='xy', scale_units='xy', scale=1, zorder=5
         )
+        ax.plot([], [], color='#d62728', lw=2, label=f'Gravity, handlebars ({handlebar_force:.1f} N)')
+        ax.plot([], [], color='#9467bd', lw=2, label=f'Gravity, reaction wheel ({rw_force:.1f} N)')
+        motor_arrow = ax.quiver([0], [0], [0], [0], color='#ff7f0e', angles='xy',
+                                scale_units='xy', scale=1, zorder=5)
+        ax.plot([], [], color='#ff7f0e', lw=2, label='Motor torque force')
+        ax.legend(loc='lower left', fontsize=8)
+
+        info_box = ax.text(
+            0.98, 0.98, "", transform=ax.transAxes, ha='right', va='top', family='monospace',
+            fontsize=9, bbox=dict(boxstyle='round', facecolor='white', alpha=0.85)
+        )
+
+        def draw_frame(i):
+            x, y = self.x_history[i], self.y_history[i]
+            rw_x, rw_y = x * rw_ratio, y * rw_ratio
+
+            line.set_data([0, x], [0, y])
+            trace.set_data(self.x_history[:i + 1], self.y_history[:i + 1])
+            rw_marker.set_data([rw_x], [rw_y])
+            gravity_arrows.set_offsets([[x, y], [rw_x, rw_y]])
+
+            # Tangent to the stem; the minus matches accel = -(torque_motor + ...) / inertia
+            theta = self.theta_history[i]
+            motor_force = motor_forces[i]
+            motor_arrow.set_offsets([[rw_x, rw_y]])
+            motor_arrow.set_UVC(-motor_force * arrow_scale * math.cos(theta),
+                                -motor_force * arrow_scale * math.sin(theta))
+
+            info_box.set_text(
+                f"motor = {motor_force:7.2f} N\n"
+                f"accel = {self.accel_history[i]:7.2f} rad/s^2\n"
+                f"omega = {self.w_history[i]:7.2f} rad/s\n"
+                f"theta = {self.theta_history[i]:7.2f} rad"
+            )
+            fig.canvas.draw_idle()
+
+        # Frame slider and play/pause button
+        slider = Slider(fig.add_axes([0.15, 0.06, 0.58, 0.03]), 'Frame', 0, self.steps - 1,
+                        valinit=0, valstep=1)
+        button = Button(fig.add_axes([0.8, 0.05, 0.1, 0.05]), 'Pause')
+        playing = [True]
+
+        def toggle(_event):
+            playing[0] = not playing[0]
+            button.label.set_text('Pause' if playing[0] else 'Play')
+
+        def advance(_frame):
+            if playing[0]:
+                slider.set_val((int(slider.val) + 1) % self.steps)
+
+        slider.on_changed(lambda val: draw_frame(int(val)))
+        button.on_clicked(toggle)
+        draw_frame(0)
+
+        # Keep a reference so the animation isn't garbage collected
+        anim = animation.FuncAnimation(fig, advance, interval=self.dt*1000, cache_frame_data=False)
 
         plt.show()
 
 
 if __name__ == "__main__":
-    sim = ScooterReversePendulumReactionWheel()
+    sim = ScooterReversePendulumReactionWheel(starting_angle=math.pi*(9/8))
 
     # Sim Constants
     dt = 0.01
     SIM_TIME = 10.0 # (seconds)
-    APPLIED_CURRENT = 3.5 # Current (Amps)
+    APPLIED_CURRENT = 10.0 # Current (Amps)
 
     for t in range(int(SIM_TIME/dt)):
         theta, w, a = sim.step(APPLIED_CURRENT)
