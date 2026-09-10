@@ -27,8 +27,8 @@ def body_moment_of_intertia():
 
 BODY_MOMENT_OF_INTERTIA, RW_OFFSET = body_moment_of_intertia()
 
-STARTING_ANGLE = math.pi # 0 is pointing straight down, so PI is standing up super straight
-APPLIED_CURRENT = 0.0 # (Amps)
+STARTING_ANGLE = math.pi*(9/8) # 0 is pointing straight down, so PI is standing up super straight
+APPLIED_CURRENT = 25.0 # (Amps)
 
 dt = 0.01 # (seconds)
 SIM_TIME = 10.0 # (seconds)
@@ -36,10 +36,17 @@ SIM_TIME = 10.0 # (seconds)
 # state = [theta (rads), angular velocity (rad/second)]
 Y = np.array([STARTING_ANGLE, 0.0])
 
+def acceleration(theta):
+    torque_motor = APPLIED_CURRENT * motor_kt
+    torque_gravity = (m1 * g * l2 * math.sin(theta)) + (mr * g * l1 * math.sin(theta)) # handlebars + reaction wheel
+    total_system_inertia = BODY_MOMENT_OF_INTERTIA + (mr * l1**2)
+    accel = - (torque_motor + torque_gravity) / total_system_inertia
+    return accel
+
 def rhs(Y):
     "Return the derivatives at the right hand side of the curve being approximated"
     theta, vel = Y 
-    accel = - (APPLIED_CURRENT*motor_kt + m1*g*math.sin(theta))/(BODY_MOMENT_OF_INTERTIA+(mr*RW_OFFSET**2))
+    accel = acceleration(theta)
     return np.array([vel, accel]) # [angular velocity (rad/s), acceleration (rad/s^2)]
 
 def rk4_step(Y, h):
@@ -59,7 +66,7 @@ for t in range(int(SIM_TIME/dt)):
     Y = rk4_step(Y, dt)
 
     theta, w = Y
-    a = - (APPLIED_CURRENT*motor_kt + m1*g*math.sin(theta))/(BODY_MOMENT_OF_INTERTIA+(mr*RW_OFFSET**2))
+    a = acceleration(theta)
 
     x_history.append(l2 * math.sin(theta))
     y_history.append(-l2 * math.cos(theta))
