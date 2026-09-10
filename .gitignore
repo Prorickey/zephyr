@@ -1,0 +1,7 @@
+# Ignore all python cache folders recursively
+**/__pycache__/
+*.pyc
+
+# Ignore all virtual environment folders recursively
+**/venv/
+**/.venv/
