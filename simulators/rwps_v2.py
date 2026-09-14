@@ -12,9 +12,9 @@ class ScooterReversePendulumReactionWheel():
     TODO: This in particular lacks ability to simulate the motor's saturation (max speed limits).
     """
 
-    def __init__(self, handlebar_mass = 2.0, body_mass = 35.0, reaction_wheel_mass = 5.0, 
-                 length_off_body_of_reaction_wheel = 0.3, stem_length = 1.0, motor_kt = 1.0, 
-                 starting_angle = math.pi, dt = 0.01, gravity = 9.81):
+    def __init__(self, handlebar_mass = 2.0, body_mass = 35.0, reaction_wheel_mass = 1.0, 
+                 length_off_body_of_reaction_wheel = 0.3, stem_length = 1.0, motor_kt = 0.0503, 
+                 starting_angle = math.pi, rw_stall_torque = 8.0, rw_max_speed = 883.4, dt = 0.01, gravity = 9.81):
         """
         handlebar_mass = 2.0 # (kilograms) mass of the handlebars\n
         body_mass = 35.0 # (kilograms) mass of deck and body\n
@@ -23,6 +23,8 @@ class ScooterReversePendulumReactionWheel():
         stem_length = 1.0 # (meters) total lengths of scooter stem\n
         motor_kt = 1.0 # (Nm/A) motor constant T (torque) = A (current) * Kt (motor constant)\n
         starting_angle = PI # PI is facing straigtht up\n
+        rw_stall_torque = 40.0 # (Nm) stall torque for reaction wheel\n
+        rw_max_speed = 400.0 # (rad/s) max angular velocity no load
         dt = 0.01 # time step for sim, in seconds\n
         gravity = 9.81 # (meter/second^2) gravity
         """
@@ -34,6 +36,8 @@ class ScooterReversePendulumReactionWheel():
         self.stem_length = stem_length
         self.motor_kt = motor_kt
         self.starting_angle = starting_angle
+        self.rw_stall_torque = rw_stall_torque
+        self.rw_max_speed = rw_max_speed
         self.dt = dt
         self.gravity = gravity 
 
@@ -43,11 +47,21 @@ class ScooterReversePendulumReactionWheel():
         self.w_history = []
         self.accel_history = []
         self.current_history = []
+        self.rw_x_history = []
+        self.rw_y_history = []
+        self.rw_w_history = []
+        self.motor_torque_history = []
+        self.motor_force_history = []          # (fx, fy) in N, tangential force at the reaction wheel
+        self.handlebar_gravity_history = []    # (fx, fy) in N
+        self.rw_gravity_history = []           # (fx, fy) in N
 
         self.steps = 0
 
         # state = [theta (rads), angular velocity (rad/second)]
         self.Y = np.array([starting_angle, 0.0])
+
+        # state = angular velocity (rad/second)
+        self.Y_rw = 0.0
 
         self.BODY_MOMENT_OF_INERTIA, self.RW_OFFSET = self.body_moment_of_intertia()
 
@@ -58,41 +72,74 @@ class ScooterReversePendulumReactionWheel():
 
         return self.handlebar_mass*(r1**2) + self.body_mass*(r2**2), self.length_off_body_of_reaction_wheel-r1
 
-    def acceleration(self, applied_current, theta):
-        torque_motor = applied_current * self.motor_kt
+    def acceleration(self, rw_control_input, theta, w):
+        torque_motor = self.rw_torque(rw_control_input, w)
         torque_gravity = (self.handlebar_mass * self.gravity * self.stem_length * math.sin(theta)) + (self.reaction_wheel_mass * self.gravity * self.length_off_body_of_reaction_wheel * math.sin(theta)) # handlebars + reaction wheel
         total_system_inertia = self.BODY_MOMENT_OF_INERTIA + (self.reaction_wheel_mass * self.length_off_body_of_reaction_wheel**2)
         accel = - (torque_motor + torque_gravity) / total_system_inertia
         return accel
 
-    def step(self, applied_current = 0.0):
-        self.Y = self.rk4_step(applied_current, self.Y, self.dt)
+    def rw_torque(self, applied_input, angular_velocity):
+        return applied_input * self.rw_stall_torque - angular_velocity*(self.rw_stall_torque/self.rw_max_speed)
+
+    def step(self, rw_control_input = 0.0):
+        self.Y = self.rk4_step_body(rw_control_input, self.Y, self.dt)
 
         theta, w = self.Y
+        accel = self.acceleration(rw_control_input, theta, w)
+
+        self.Y_rw = self.rk4_step_rw(rw_control_input, self.Y_rw, self.dt)
     
         self.x_history.append(self.stem_length * math.sin(theta))
         self.y_history.append(-self.stem_length * math.cos(theta))
         self.theta_history.append(theta)
         self.w_history.append(w)
-        self.accel_history.append(self.acceleration(applied_current, theta))
-        self.current_history.append(applied_current)
+        self.accel_history.append(accel)
+        self.current_history.append(rw_control_input)
+
+        self.rw_x_history.append(self.length_off_body_of_reaction_wheel * math.sin(theta))
+        self.rw_y_history.append(-self.length_off_body_of_reaction_wheel * math.cos(theta))
+        self.rw_w_history.append(self.Y_rw)
+
+        # Motor torque as an equivalent tangential force at the reaction wheel (F = T / r);
+        # the minus matches accel = -(torque_motor + ...) / inertia
+        torque_motor = self.rw_torque(rw_control_input, w)
+        motor_force = torque_motor / self.length_off_body_of_reaction_wheel
+        self.motor_torque_history.append(torque_motor)
+        self.motor_force_history.append((-motor_force * math.cos(theta), -motor_force * math.sin(theta)))
+        self.handlebar_gravity_history.append((0.0, -self.handlebar_mass * self.gravity))
+        self.rw_gravity_history.append((0.0, -self.reaction_wheel_mass * self.gravity))
 
         self.steps += 1
 
-        return theta, w, self.acceleration(applied_current, theta)
+        return theta, w, accel
 
-    def rhs(self, applied_current, Y):
-        "Return the derivatives at the right hand side of the curve being approximated"
-        theta, vel = Y 
-        accel = self.acceleration(applied_current, theta)
-        return np.array([vel, accel]) # [angular velocity (rad/s), acceleration (rad/s^2)]
-
-    def rk4_step(self, applied_current, Y, h):
+    def rk4_step_body(self, rw_control_input, Y, h):
         "Fourth Order Runge-Kutta Integration"
-        k1 = self.rhs(applied_current, Y)
-        k2 = self.rhs(applied_current, Y + h/2 * k1)
-        k3 = self.rhs(applied_current, Y + h/2 * k2)
-        k4 = self.rhs(applied_current, Y + h*k3)
+        def rhs(state):
+            "Return the derivatives at the right hand side of the curve being approximated"
+            theta, vel = state
+            accel = self.acceleration(rw_control_input, theta, vel)
+            return np.array([vel, accel]) # [angular velocity (rad/s), acceleration (rad/s^2)]
+        
+        k1 = rhs(Y)
+        k2 = rhs(Y + h/2 * k1)
+        k3 = rhs(Y + h/2 * k2)
+        k4 = rhs(Y + h*k3)
+
+        return Y + (h/6)*(k1+(2*k2)+(2*k3)+k4)
+
+    def rk4_step_rw(self, rw_control_input, Y, h):
+        "Fourth Order Runge-Kutta Integration"
+        def rhs(state):
+            torque_motor = self.rw_torque(rw_control_input, state)
+            motor_accel = torque_motor / self.reaction_wheel_mass
+            return motor_accel
+        
+        k1 = rhs(Y)
+        k2 = rhs(Y + h/2 * k1)
+        k3 = rhs(Y + h/2 * k2)
+        k4 = rhs(Y + h*k3)
 
         return Y + (h/6)*(k1+(2*k2)+(2*k3)+k4)
 
@@ -106,28 +153,20 @@ class ScooterReversePendulumReactionWheel():
         ax.grid(True, linestyle='--', alpha=0.5)
         ax.set_title("Scooter Simulation", fontsize=14)
 
-        # Gravity forces (N), scaled so the largest arrow is half the stem length
-        handlebar_force = self.handlebar_mass * self.gravity
-        rw_force = self.reaction_wheel_mass * self.gravity
-        # Motor torque expressed as an equivalent tangential force at the reaction wheel (F = T / r)
-        motor_forces = [c * self.motor_kt / self.length_off_body_of_reaction_wheel for c in self.current_history]
-        max_motor_force = max(abs(f) for f in motor_forces)
-
-        arrow_scale = 0.5 * self.stem_length / max(handlebar_force, rw_force, max_motor_force)
-        rw_ratio = self.length_off_body_of_reaction_wheel / self.stem_length
+        # Arrow length scale: the largest recorded force is drawn at half the stem length
+        all_forces = self.handlebar_gravity_history + self.rw_gravity_history + self.motor_force_history
+        arrow_scale = 0.5 * self.stem_length / max(math.hypot(fx, fy) for fx, fy in all_forces)
 
         # Create the visual elements that will be updated each frame
         line, = ax.plot([], [], 'o-', lw=3, color='#1f77b4', markersize=8)  # Pendulum rod and bob
         trace, = ax.plot([], [], '-', lw=1, color='orange', alpha=0.6)      # Trace path of the bob
         rw_marker, = ax.plot([], [], 'o', color='#2ca02c', markersize=12, label='Reaction wheel')
-        gravity_arrows = ax.quiver(
-            [0, 0], [0, 0], [0, 0], [-handlebar_force * arrow_scale, -rw_force * arrow_scale],
-            color=['#d62728', '#9467bd'], angles='xy', scale_units='xy', scale=1, zorder=5
+        force_arrows = ax.quiver(
+            [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+            color=['#d62728', '#9467bd', '#ff7f0e'], angles='xy', scale_units='xy', scale=1, zorder=5
         )
-        ax.plot([], [], color='#d62728', lw=2, label=f'Gravity, handlebars ({handlebar_force:.1f} N)')
-        ax.plot([], [], color='#9467bd', lw=2, label=f'Gravity, reaction wheel ({rw_force:.1f} N)')
-        motor_arrow = ax.quiver([0], [0], [0], [0], color='#ff7f0e', angles='xy',
-                                scale_units='xy', scale=1, zorder=5)
+        ax.plot([], [], color='#d62728', lw=2, label='Gravity, handlebars')
+        ax.plot([], [], color='#9467bd', lw=2, label='Gravity, reaction wheel')
         ax.plot([], [], color='#ff7f0e', lw=2, label='Motor torque force')
         ax.legend(loc='lower left', fontsize=8)
 
@@ -138,22 +177,20 @@ class ScooterReversePendulumReactionWheel():
 
         def draw_frame(i):
             x, y = self.x_history[i], self.y_history[i]
-            rw_x, rw_y = x * rw_ratio, y * rw_ratio
+            rw_x, rw_y = self.rw_x_history[i], self.rw_y_history[i]
 
             line.set_data([0, x], [0, y])
             trace.set_data(self.x_history[:i + 1], self.y_history[:i + 1])
             rw_marker.set_data([rw_x], [rw_y])
-            gravity_arrows.set_offsets([[x, y], [rw_x, rw_y]])
 
-            # Tangent to the stem; the minus matches accel = -(torque_motor + ...) / inertia
-            theta = self.theta_history[i]
-            motor_force = motor_forces[i]
-            motor_arrow.set_offsets([[rw_x, rw_y]])
-            motor_arrow.set_UVC(-motor_force * arrow_scale * math.cos(theta),
-                                -motor_force * arrow_scale * math.sin(theta))
+            forces = [self.handlebar_gravity_history[i], self.rw_gravity_history[i], self.motor_force_history[i]]
+            force_arrows.set_offsets([[x, y], [rw_x, rw_y], [rw_x, rw_y]])
+            force_arrows.set_UVC([fx * arrow_scale for fx, _ in forces],
+                                 [fy * arrow_scale for _, fy in forces])
 
             info_box.set_text(
-                f"motor = {motor_force:7.2f} N\n"
+                f"motor = {self.motor_torque_history[i]:7.2f} Nm\n"
+                f"rw w  = {self.rw_w_history[i]:7.2f} rad/s\n"
                 f"accel = {self.accel_history[i]:7.2f} rad/s^2\n"
                 f"omega = {self.w_history[i]:7.2f} rad/s\n"
                 f"theta = {self.theta_history[i]:7.2f} rad"
@@ -185,16 +222,17 @@ class ScooterReversePendulumReactionWheel():
 
 
 if __name__ == "__main__":
-    sim = ScooterReversePendulumReactionWheel(starting_angle=math.pi*(9/8))
+
+    offset_angle = math.radians(20)
+
+    sim = ScooterReversePendulumReactionWheel(starting_angle=math.pi+offset_angle)
 
     # Sim Constants
     dt = 0.01
     SIM_TIME = 10.0 # (seconds)
-    APPLIED_CURRENT = 10.0 # Current (Amps)
+    RW_CONTROL_INPUT = 1.0 # Control Input: -1.0-1.0 scale where 0-1 is a linear scale of power
 
     for t in range(int(SIM_TIME/dt)):
-        theta, w, a = sim.step(APPLIED_CURRENT)
-
-        print(f"time (s): {t} accel (rad/s^2): {a} angular velocity (rad/s): {w} theta (rad): {theta}")
+        sim.step(RW_CONTROL_INPUT)
 
     sim.show_plot()
