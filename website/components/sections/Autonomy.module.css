@@ -1,0 +1,43 @@
+.cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2.4rem;
+  margin: 2.2rem 0;
+}
+
+.col h3 {
+  font-weight: 400;
+  font-style: italic;
+  font-size: 1.3rem;
+  margin-bottom: 0.6rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.4rem;
+}
+
+.col p {
+  font-size: 0.98rem;
+  opacity: 0.8;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.4rem;
+}
+
+.tags span {
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.35rem 0.95rem;
+  color: var(--grey);
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.tags span:hover {
+  color: var(--white);
+  border-color: var(--white);
+}

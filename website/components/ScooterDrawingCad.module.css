@@ -1,0 +1,168 @@
+.wrap {
+  width: min(620px, 88vw);
+  margin: 1.8rem auto 0;
+  color: var(--white);
+}
+
+.scooter {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* ---------- silhouette: heavy white strokes that draw themselves in ----------
+   Every drawn element carries pathLength="1", so a dasharray of 1 always
+   equals the element's full length and each stroke draws over its whole
+   animation instead of popping in at the end. */
+.draw {
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: drawIn 1.6s ease forwards;
+}
+
+.fine {
+  stroke-width: 1.5;
+}
+
+/* Stagger groups: wheels + deck first, then running gear, stem, cockpit. */
+.d1 { animation-delay: 0.5s; }
+.d2 { animation-delay: 0.9s; }
+.d3 { animation-delay: 1.3s; }
+.d4 { animation-delay: 1.7s; }
+
+/* Axle centre marks and hub dots. */
+.mark {
+  stroke: currentColor;
+  stroke-width: 1;
+  fill: none;
+  opacity: 0;
+  animation: fadeIn 0.6s ease 2.4s forwards;
+}
+
+.dot {
+  fill: currentColor;
+  stroke: none;
+  opacity: 0;
+  animation: fadeIn 0.5s ease 1.4s forwards;
+}
+
+/* ---------- drafting layer: thin grey construction + dimensions ---------- */
+
+/* Centre lines (long-short-long) fade in; a dash pattern can't use the
+   dashoffset trick. */
+.cl {
+  stroke: var(--grey);
+  stroke-width: 0.8;
+  fill: none;
+  stroke-dasharray: 12 4 2 4;
+  opacity: 0;
+  animation: fadeIn 1s ease forwards;
+}
+
+/* Hidden lines (battery pack under the deck). */
+.hid {
+  stroke: var(--grey);
+  stroke-width: 0.9;
+  fill: none;
+  stroke-dasharray: 5 3;
+  opacity: 0;
+  animation: fadeIn 1s ease forwards;
+}
+
+/* Solid dimension / extension / leader lines draw in. */
+.dim {
+  stroke: var(--grey);
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: drawIn 1s ease forwards;
+}
+
+.lbl {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  fill: var(--grey);
+  stroke: none;
+  opacity: 0;
+  animation: fadeIn 0.8s ease forwards;
+}
+
+/* Annotation stagger: construction, then hidden/detail, then dimensions,
+   then labels. */
+.a1 { animation-delay: 2.2s; }
+.a2 { animation-delay: 2.7s; }
+.a3 { animation-delay: 3.1s; }
+.a4 { animation-delay: 3.6s; }
+
+/* Sensor sweep: draws in, then keeps breathing once the sheet is complete. */
+.pulse {
+  stroke: currentColor;
+  stroke-width: 1.2;
+  fill: none;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: drawIn 1s ease forwards, sonar 3.2s ease-in-out infinite;
+}
+.p1 { animation-delay: 2s, 3.8s; }
+.p2 { animation-delay: 2.3s, 4.2s; }
+
+@keyframes drawIn {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sonar {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* Final state when animations are disabled (?noanim / reduced motion). */
+:global(html[data-noanim]) .draw,
+:global(html[data-noanim]) .dim,
+:global(html[data-noanim]) .pulse {
+  stroke-dashoffset: 0;
+}
+
+:global(html[data-noanim]) .dot,
+:global(html[data-noanim]) .mark,
+:global(html[data-noanim]) .cl,
+:global(html[data-noanim]) .hid,
+:global(html[data-noanim]) .lbl {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draw,
+  .dim,
+  .pulse {
+    stroke-dashoffset: 0;
+  }
+  .dot,
+  .mark,
+  .cl,
+  .hid,
+  .lbl {
+    opacity: 1;
+  }
+}

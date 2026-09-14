@@ -1,0 +1,81 @@
+/* ============ Zephyr — black & white editorial ============ */
+
+:root {
+  --black: #0a0a0a;
+  --white: #f7f5f0;
+  --grey: #8a8a86;
+  --line: rgba(247, 245, 240, 0.25);
+  --line-dark: rgba(10, 10, 10, 0.2);
+  --white-faint: rgba(247, 245, 240, 0.06);
+  --serif: "Times New Roman", Times, Georgia, serif;
+  --taskbar-height: 58px;
+  --content-max-width: 860px;
+  --mobile-breakpoint: 880px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: var(--taskbar-height);
+}
+
+body {
+  font-family: var(--serif);
+  background: var(--black);
+  color: var(--white);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+}
+
+::selection {
+  background: var(--white);
+  color: var(--black);
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+svg {
+  display: block;
+}
+
+/* Reduced motion + the ?noanim escape hatch: everything lands in its final
+   state. Component modules add their own stroke/opacity overrides. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+html[data-noanim] {
+  scroll-behavior: auto;
+}
+
+html[data-noanim] *,
+html[data-noanim] *::before,
+html[data-noanim] *::after {
+  animation: none !important;
+  transition: none !important;
+}

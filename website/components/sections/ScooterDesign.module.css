@@ -1,0 +1,26 @@
+.specTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0 1.6rem;
+}
+
+.specTable th,
+.specTable td {
+  text-align: left;
+  padding: 0.85rem 0.4rem;
+  border-bottom: 1px solid var(--line-dark);
+  vertical-align: top;
+}
+
+.specTable th {
+  font-weight: 400;
+  font-style: italic;
+  width: 9.5em;
+  color: var(--grey);
+}
+
+@media (max-width: 880px) {
+  .specTable th {
+    width: 7em;
+  }
+}
