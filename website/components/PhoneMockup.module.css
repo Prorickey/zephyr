@@ -324,15 +324,83 @@
 }
 
 .summon {
+  display: block;
+  width: 100%;
   text-align: center;
   border: 1px solid var(--white);
   border-radius: 999px;
   padding: 0.72em 0.5em;
+  font-family: var(--serif);
   font-size: 1.15em;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--white);
+  background: transparent;
   line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.3s ease, color 0.3s ease, opacity 0.3s ease, transform 0.15s ease;
+}
+
+.summon:hover:not(:disabled),
+.summon:focus-visible {
+  background: var(--white-faint);
+}
+
+.summon:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.summon:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.summonArrived {
+  background: var(--white);
+  color: var(--black);
+}
+
+.summonArrived:hover:not(:disabled) {
+  background: var(--white);
+  opacity: 0.9;
+}
+
+/* ---- Scooter marker (moved along the route by SMIL animateMotion) ------ */
+
+.scooterHalo {
+  fill: #0b0b0b;
+  opacity: 0.92;
+}
+
+.scooterGlyph circle,
+.scooterGlyph path {
+  fill: none;
+  stroke: var(--white);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Route dashes flow in the direction of travel while the scooter moves.
+   The dash pattern (3.2 + 3.6) repeats every 6.8 units. */
+.routeOut {
+  animation: marchOut 0.5s linear infinite;
+}
+
+.routeBack {
+  animation: marchBack 0.5s linear infinite;
+}
+
+@keyframes marchOut {
+  to {
+    stroke-dashoffset: 6.8;
+  }
+}
+
+@keyframes marchBack {
+  to {
+    stroke-dashoffset: -6.8;
+  }
 }
 
 .homeBar {
