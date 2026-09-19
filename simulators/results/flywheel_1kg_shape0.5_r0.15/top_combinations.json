@@ -1,0 +1,62 @@
+[
+  {
+    "scooter": "hover1_renegade",
+    "motor": "tmotor_u15_ii_kv80",
+    "voltage": 54.0,
+    "pack_limited_deg": 6.643102169036864,
+    "uncapped_deg": 9.186050891876219,
+    "static_deg": 13.350919068747855,
+    "peak_torque_nm": 17.0742,
+    "wheel_momentum_nms": 5.087939698492462,
+    "pack_peak_power_w": 1350.0,
+    "cost_usd": 989.89
+  },
+  {
+    "scooter": "hover1_renegade",
+    "motor": "tmotor_u15ii_kv100",
+    "voltage": 54.0,
+    "pack_limited_deg": 6.612524986267089,
+    "uncapped_deg": 9.842097759246828,
+    "static_deg": 12.454706447758626,
+    "peak_torque_nm": 15.94683,
+    "wheel_momentum_nms": 6.361922714420357,
+    "pack_peak_power_w": 1350.0,
+    "cost_usd": 989.89
+  },
+  {
+    "scooter": "iscooter_i9m",
+    "motor": "tmotor_u15ii_kv100",
+    "voltage": 36.0,
+    "pack_limited_deg": 6.390845775604248,
+    "uncapped_deg": 10.087637901306154,
+    "static_deg": 16.21451973459381,
+    "peak_torque_nm": 15.94683,
+    "wheel_momentum_nms": 4.241281809613572,
+    "pack_peak_power_w": 750.0,
+    "cost_usd": 969.89
+  },
+  {
+    "scooter": "iscooter_i9m",
+    "motor": "tmotor_u15_ii_kv80",
+    "voltage": 36.0,
+    "pack_limited_deg": 6.326258182525636,
+    "uncapped_deg": 8.974885940551758,
+    "static_deg": 17.3960548550982,
+    "peak_torque_nm": 17.0742,
+    "wheel_momentum_nms": 3.3919597989949746,
+    "pack_peak_power_w": 750.0,
+    "cost_usd": 969.89
+  },
+  {
+    "scooter": "hover1_renegade",
+    "motor": "aps_c80100_sensored_80kv",
+    "voltage": 54.0,
+    "pack_limited_deg": 6.2113094329833975,
+    "uncapped_deg": 7.947621345520018,
+    "static_deg": 10.166108257820627,
+    "peak_torque_nm": 13.134,
+    "wheel_momentum_nms": 5.087939698492462,
+    "pack_peak_power_w": 1350.0,
+    "cost_usd": 574.99
+  }
+]

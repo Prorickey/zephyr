@@ -14,8 +14,9 @@ class ScooterReversePendulumReactionWheel():
         theta_ddot = (M g sin(theta) - tau_m - b theta_dot) / J
         phi_ddot   = tau_m / I_w - theta_ddot
     with
-        M = m_h L_1 + m_b h_b + m_w L_2   gravitational moment
-        J = I_a + m_w L_2^2               total inertia about the pivot
+        M = m_h L_1 + m_b h_b + (m_w + m_s) L_2   gravitational moment
+        J = I_a + (m_w + m_s) L_2^2               total inertia about the pivot
+    where m_s is the motor's non-spinning mass (stator, mount), bolted to the frame at the wheel.
 
     Conventions: theta = 0 is upright. Positive rotation is counterclockwise when viewed from behind
     the scooter; theta, phi, tau_m and V all use this convention. phi is the wheel's angle relative
@@ -36,7 +37,8 @@ class ScooterReversePendulumReactionWheel():
                  stem_length = 1.1, body_com_height = 0.2, reaction_wheel_height = 0.3,
                  reaction_wheel_radius = 0.15, motor_kt = 0.0503, motor_ke = None, motor_resistance = 0.048,
                  motor_max_current = 43.7, nominal_voltage = 22.2, friction = 0.0, starting_angle = 0.0,
-                 dt = 0.01, gravity = 9.81, frame_inertia = None, frame_moment = None, reaction_wheel_inertia = None):
+                 dt = 0.01, gravity = 9.81, frame_inertia = None, frame_moment = None, reaction_wheel_inertia = None,
+                 motor_mass = 0.0, battery_max_power = None):
         """
         handlebar_mass = 2.0 # (kg) m_h, mass of the handlebars (bar, grips, display, levers). Estimate\n
         body_mass = 17.0 # (kg) m_b, mass of the body (deck, fork, stem, battery, electronics). Ninebot Max G30 is 18.7 kg total, less the handlebars\n
@@ -56,7 +58,9 @@ class ScooterReversePendulumReactionWheel():
         gravity = 9.81 # (m/s^2) gravity\n
         frame_inertia = None # (kg*m^2) I_a, measured frame inertia about the pivot. Overrides the point-mass estimate\n
         frame_moment = None # (kg*m) m_a * h_a, measured frame gravitational moment. Overrides the point-mass estimate\n
-        reaction_wheel_inertia = None # (kg*m^2) I_w, measured wheel inertia about its axle. Overrides the solid-disk estimate
+        reaction_wheel_inertia = None # (kg*m^2) I_w, measured wheel inertia about its axle. Overrides the solid-disk estimate\n
+        motor_mass = 0.0 # (kg) m_s, non-spinning motor mass (stator, mount) at L_2. Adds to M and J but not to I_w\n
+        battery_max_power = None # (W) most the battery can deliver to the flywheel motor. None means unlimited. Regen is never limited
         """
 
         self.handlebar_mass = handlebar_mass
@@ -75,6 +79,8 @@ class ScooterReversePendulumReactionWheel():
         self.starting_angle = starting_angle
         self.dt = dt
         self.gravity = gravity
+        self.motor_mass = motor_mass
+        self.battery_max_power = battery_max_power
 
         # I_a: frame inertia about the pivot. Placeholder: handlebars and body modeled as point masses,
         # I_a ~= m_h L_1^2 + m_b h_b^2. Replace with a measured value once the scooter is built.
@@ -92,11 +98,11 @@ class ScooterReversePendulumReactionWheel():
             reaction_wheel_inertia = 0.5 * reaction_wheel_mass * reaction_wheel_radius**2
         self.reaction_wheel_inertia = reaction_wheel_inertia
 
-        # M = m_a h_a + m_w L_2: gravitational moment of everything about the pivot
-        self.gravitational_moment = self.frame_moment + reaction_wheel_mass * reaction_wheel_height
+        # M = m_a h_a + (m_w + m_s) L_2: gravitational moment of everything about the pivot
+        self.gravitational_moment = self.frame_moment + (reaction_wheel_mass + motor_mass) * reaction_wheel_height
 
-        # J = I_a + m_w L_2^2: total inertia about the pivot (the wheel's spin is handled separately by I_w)
-        self.total_inertia = self.frame_inertia + reaction_wheel_mass * reaction_wheel_height**2
+        # J = I_a + (m_w + m_s) L_2^2: total inertia about the pivot (the wheel's spin is handled separately by I_w)
+        self.total_inertia = self.frame_inertia + (reaction_wheel_mass + motor_mass) * reaction_wheel_height**2
 
         self.x_history = []
         self.y_history = []
@@ -126,12 +132,24 @@ class ScooterReversePendulumReactionWheel():
         tau_m = (K_t / R) * (V - K_e * phi_dot): the torque the motor applies to the wheel.
         Back-EMF uses phi_dot, the wheel's speed relative to the frame, since the stator is bolted
         to the frame. The frame feels -tau_m. The winding current (V - K_e phi_dot) / R is clamped
-        to +/- motor_max_current when a limit is set.
+        to +/- motor_max_current when a limit is set, and then to what battery_max_power can feed:
+        the motor draws (K_e phi_dot + i R) i, so i <= (-e + sqrt(e^2 + 4 R P)) / (2 R) with e the
+        back-EMF along the current. Power flowing back into the battery (braking) is not limited.
         """
-        current = (voltage - self.motor_ke * phi_dot) / self.motor_resistance
+        back_emf = self.motor_ke * phi_dot
+        current = (voltage - back_emf) / self.motor_resistance
         if self.motor_max_current is not None:
             current = max(-self.motor_max_current, min(self.motor_max_current, current))
+        if self.battery_max_power is not None and current != 0.0:
+            direction = math.copysign(1.0, current)
+            emf_along = direction * back_emf
+            limit = (-emf_along + math.sqrt(emf_along**2 + 4 * self.motor_resistance * self.battery_max_power)) / (2 * self.motor_resistance)
+            current = direction * min(abs(current), limit)
         return self.motor_kt * current
+
+    def peak_torque(self):
+        "(Nm) Motor torque at stall with full voltage, after the current clamp and the battery power cap."
+        return self.motor_torque(self.nominal_voltage, 0.0)
 
     def frame_acceleration(self, voltage, theta, theta_dot, phi_dot):
         "theta_ddot = (M g sin(theta) - tau_m - b theta_dot) / J"
@@ -180,7 +198,7 @@ class ScooterReversePendulumReactionWheel():
         self.motor_force_history.append((motor_force * math.cos(theta), motor_force * math.sin(theta)))
         self.handlebar_gravity_history.append((0.0, -self.handlebar_mass * self.gravity))
         self.body_gravity_history.append((0.0, -self.body_mass * self.gravity))
-        self.rw_gravity_history.append((0.0, -self.reaction_wheel_mass * self.gravity))
+        self.rw_gravity_history.append((0.0, -(self.reaction_wheel_mass + self.motor_mass) * self.gravity))
 
         self.steps += 1
 
@@ -194,6 +212,38 @@ class ScooterReversePendulumReactionWheel():
         k4 = self.derivatives(voltage, Y + h*k3)
 
         return Y + (h/6)*(k1+(2*k2)+(2*k3)+k4)
+
+    def recovers_from(self, theta_0, max_time = 8.0):
+        """
+        True if the scooter can get back to upright from rest at lean theta_0 with the wheel initially stopped.
+        Applies full voltage and succeeds once the frame has enough energy to coast to upright,
+        1/2 J theta_dot^2 >= M g (1 - cos(theta)); the catch afterwards only needs braking torque, which this
+        model always has because the supply is an ideal sink (a real pack needs a brake resistor to absorb it).
+        Fails if the wheel runs out of speed (back-EMF) or torque first. This is the best any controller can do;
+        a saturated LQR lands within ~0.1 degrees of it. Pivot friction is ignored during the coast.
+        """
+        Y = np.array([abs(theta_0), 0.0, 0.0])
+        potential = self.gravitational_moment * self.gravity
+        for _ in range(int(max_time / self.dt)):
+            Y = self.rk4_step(self.nominal_voltage, Y, self.dt)
+            theta, theta_dot, _ = Y
+            if theta <= 0 or (theta_dot < 0 and 0.5 * self.total_inertia * theta_dot**2 >= potential * (1 - math.cos(theta))):
+                return True
+            if theta > math.pi / 2:
+                return False
+        return False
+
+    def max_recovery_angle(self):
+        "(rad) Largest lean angle recovers_from() succeeds at, by bisection."
+        low, high = 0.0, math.pi / 2
+        for _ in range(22):
+            mid = (low + high) / 2
+            low, high = (mid, high) if self.recovers_from(mid) else (low, mid)
+        return low
+
+    def static_holding_angle(self):
+        "(rad) Lean angle where peak motor torque equals the gravity torque. Upper bound on the recovery angle."
+        return math.asin(min(1.0, self.peak_torque() / (self.gravitational_moment * self.gravity)))
 
     def show_plot(self):
         # Set up the Matplotlib Figure and Axis
@@ -282,31 +332,70 @@ class ScooterReversePendulumReactionWheel():
 
 # Motor presets: keyword arguments for ScooterReversePendulumReactionWheel. K_t = 60 / (2 pi KV) and K_e = K_t.
 # Resistances are the manufacturers' line-to-line "internal resistance" figures. Peak torque = K_t * motor_max_current.
+# This is the DC-equivalent convention (bus voltage, supply-side amps), not ODrive's 8.27 / KV per phase-amp.
+# For the outrunners motor_mass is the whole motor and the rotor's own inertia is left out of I_w, which is
+# conservative: a 0.8 kg rotor at r = 0.07 m would add about a third to the 1 kg disk's inertia.
 MOTORS = {
-    # Drone outrunner driving a separate 1 kg, 0.15 m flywheel. Peak 2.2 Nm. store.tmotor.com U8 II KV190 datasheet.
+    # Drone outrunner driving a separate 1 kg, 0.15 m flywheel. Peak 2.2 Nm, ~0.27 kg. store.tmotor.com U8 II KV190 datasheet.
     "tmotor_u8_ii_kv190": dict(
         motor_kt=0.0503, motor_resistance=0.048, motor_max_current=43.7, nominal_voltage=22.2,   # 6S
+        motor_mass=0.27,
     ),
     # 6.5" hoverboard hub motor (36 V, 350 W class, 30 mm stator). The spinning outer shell and tire are the
     # reaction wheel, so the preset also sets the wheel. KV ~16 and 0.18 ohm phase resistance from the ODrive
-    # hoverboard guide; peak ~15 Nm at 15-25 A from ffbeast.github.io measurements. Rotor mass and inertia
-    # are estimates: ~1.8 kg of the 2.9 kg wheel rotates, rim-weighted between r = 0.06 and 0.083 m.
+    # hoverboard guide; peak ~15 Nm from ffbeast.github.io. No current rating is published, so 25 A is an
+    # assumed supply-side limit chosen to give that 15 Nm. Rotor mass and inertia are estimates: ~1.8 kg of
+    # the 2.9 kg wheel rotates, rim-weighted between r = 0.06 and 0.083 m.
     "hoverboard_6p5in": dict(
         motor_kt=0.6, motor_resistance=0.36, motor_max_current=25.0, nominal_voltage=36.0,      # 10S
         reaction_wheel_mass=1.8, reaction_wheel_radius=0.083, reaction_wheel_inertia=0.0095,
+        motor_mass=1.1,   # the non-rotating 1.1 kg of the 2.9 kg wheel (stator, axle)
     ),
     # Heavy-lift drone outrunner driving a separate 1 kg, 0.15 m flywheel. Peak 17 Nm, 1.74 kg, 8.6 kW.
     # store.tmotor.com U15 II KV80 datasheet.
     "tmotor_u15_ii_kv80": dict(
-        motor_kt=0.119, motor_resistance=0.017, motor_max_current=143.0, nominal_voltage=44.4,  # 12S
+        motor_kt=0.119, motor_resistance=0.017, motor_max_current=143.0, nominal_voltage=36.0,  # 10S, the KS4 Pro pack. Datasheet rating is 12S (44.4 V) and up
+        motor_mass=1.74,
     ),
 }
+
+# Scooter presets: keyword arguments for ScooterReversePendulumReactionWheel.
+SCOOTERS = {
+    # Segway Ninebot Max G30, the class defaults. 18.7 kg total.
+    "ninebot_max_g30": dict(handlebar_mass=2.0, body_mass=17.0, stem_length=1.1, body_com_height=0.2),
+    # Hiboy KS4 Pro (hiboy.com): 18.4 kg net, 1.224 m (48.2 in) overall height, 10 in solid tires, 36 V 11.6 Ah pack,
+    # 500 W (750 W peak) rear hub motor. The mass split is an estimate: 2.0 kg handlebars at 1.20 m, 12.9 kg of
+    # deck/battery/wheels/hub motor at 0.14 m, 3.5 kg of stem and fork as a 1.0 m rod centered at 0.65 m.
+    # frame_moment and frame_inertia are those three lumps, which the single body point mass can't represent.
+    "hiboy_ks4_pro": dict(
+        handlebar_mass=2.0, body_mass=16.4, stem_length=1.20, body_com_height=0.249,
+        frame_moment=2.0*1.20 + 12.9*0.14 + 3.5*0.65,                            # 6.48 kg*m
+        frame_inertia=2.0*1.20**2 + 12.9*0.14**2 + 3.5*(0.65**2 + 1.0**2/12),    # 4.90 kg*m^2
+    ),
+}
+
+
+def print_recovery_table(voltages = (22.2, 36.0, 44.4)):
+    "Max recovery angle (degrees) for every scooter, motor and pack voltage. Skips voltages below a motor's preset voltage."
+    print(f"{'scooter':16s} {'motor':20s} {'V':>5s} {'peak Nm':>8s} {'H Nms':>6s} {'static':>7s} {'recovery':>9s}")
+    for scooter_name, scooter in SCOOTERS.items():
+        for motor_name, motor in MOTORS.items():
+            for voltage in voltages:
+                if voltage < motor["nominal_voltage"]:
+                    continue
+                sim = ScooterReversePendulumReactionWheel(**{**scooter, **motor, "nominal_voltage": voltage})
+                momentum = sim.reaction_wheel_inertia * voltage / sim.motor_ke   # wheel momentum at no-load speed
+                print(f"{scooter_name:16s} {motor_name:20s} {voltage:5.1f} "
+                      f"{sim.peak_torque():8.2f} {momentum:6.2f} "
+                      f"{math.degrees(sim.static_holding_angle()):7.2f} {math.degrees(sim.max_recovery_angle()):9.2f}")
 
 
 if __name__ == "__main__":
 
     MOTOR = "tmotor_u15_ii_kv80"   # one of MOTORS
-    sim = ScooterReversePendulumReactionWheel(starting_angle=math.radians(20), **MOTORS[MOTOR])
+    SCOOTER = "hiboy_ks4_pro"      # one of SCOOTERS
+    print_recovery_table()
+    sim = ScooterReversePendulumReactionWheel(starting_angle=math.radians(5), **SCOOTERS[SCOOTER], **MOTORS[MOTOR])
 
     # Sim Constants
     SIM_TIME = 10.0 # (seconds)
@@ -315,6 +404,8 @@ if __name__ == "__main__":
     MOTOR_VOLTAGE = sim.nominal_voltage # (volts)
 
     for t in range(int(SIM_TIME/sim.dt)):
-        sim.step(MOTOR_VOLTAGE)
+        theta, _, _ = sim.step(MOTOR_VOLTAGE)
+        if abs(theta) > math.pi / 2:   # on the ground
+            break
 
     sim.show_plot()

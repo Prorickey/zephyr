@@ -1,0 +1,62 @@
+[
+  {
+    "scooter": "hover1_renegade",
+    "motor": "freerchobby_mp12090_kv50",
+    "voltage": 54.0,
+    "pack_limited_deg": 12.3081636428833,
+    "uncapped_deg": 16.91922426223755,
+    "static_deg": 18.26336600640658,
+    "peak_torque_nm": 25.976,
+    "wheel_momentum_nms": 17.175392670157066,
+    "pack_peak_power_w": 1350.0,
+    "cost_usd": 639.99
+  },
+  {
+    "scooter": "iscooter_i9m",
+    "motor": "freerchobby_mp12090_kv50",
+    "voltage": 36.0,
+    "pack_limited_deg": 11.790454387664797,
+    "uncapped_deg": 18.607084751129154,
+    "static_deg": 23.15644764741571,
+    "peak_torque_nm": 25.976,
+    "wheel_momentum_nms": 11.45026178010471,
+    "pack_peak_power_w": 750.0,
+    "cost_usd": 619.99
+  },
+  {
+    "scooter": "iscooter_i9m",
+    "motor": "tmotor_u15_ii_kv80",
+    "voltage": 36.0,
+    "pack_limited_deg": 11.18558406829834,
+    "uncapped_deg": 15.439138412475588,
+    "static_deg": 15.726168314194492,
+    "peak_torque_nm": 17.0742,
+    "wheel_momentum_nms": 18.316582914572862,
+    "pack_peak_power_w": 750.0,
+    "cost_usd": 969.89
+  },
+  {
+    "scooter": "aovopro_es80",
+    "motor": "freerchobby_mp12090_kv50",
+    "voltage": 36.0,
+    "pack_limited_deg": 10.934293270111084,
+    "uncapped_deg": 20.59153318405151,
+    "static_deg": 25.54043920018229,
+    "peak_torque_nm": 25.976,
+    "wheel_momentum_nms": 11.45026178010471,
+    "pack_peak_power_w": 525.0,
+    "cost_usd": 639.0
+  },
+  {
+    "scooter": "iscooter_i9m",
+    "motor": "tmotor_u15ii_kv100",
+    "voltage": 36.0,
+    "pack_limited_deg": 10.896248817443846,
+    "uncapped_deg": 14.596002101898199,
+    "static_deg": 14.66363322706203,
+    "peak_torque_nm": 15.94683,
+    "wheel_momentum_nms": 22.902921771913288,
+    "pack_peak_power_w": 750.0,
+    "cost_usd": 969.89
+  }
+]
