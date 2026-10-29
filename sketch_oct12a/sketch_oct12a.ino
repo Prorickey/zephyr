@@ -98,5 +98,5 @@ void loop() {
     lastStatPrint = millis();
   } 
 
-  dt = (micros() - startTime) / 1000000;
+  dt = (micros() - startTime) / 1e6;
 }
