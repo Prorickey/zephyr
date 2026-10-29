@@ -1,15 +1,24 @@
+/* The side padding leaves a gutter for the progress line at --rail-x.
+   overflow-x: clip keeps decorative bleed (the phone mockup's glow) from
+   widening the page on phones. */
 .section {
-  padding: 7rem 2.5rem;
+  position: relative;
+  overflow-x: clip;
+  padding: 7rem 4.5rem;
+  --rail-x: 2rem;
+  --rail-node-top: 7.35rem;
 }
 
 .light {
   background: var(--white);
   color: var(--black);
+  --rail-bg: var(--white);
 }
 
 .dark {
   background: var(--black);
   color: var(--white);
+  --rail-bg: var(--black);
 }
 
 .inner {
@@ -57,6 +66,8 @@
 
 @media (max-width: 880px) {
   .section {
-    padding: 4.5rem 1.4rem;
+    padding: 4.5rem 1.4rem 4.5rem 2.6rem;
+    --rail-x: 0.95rem;
+    --rail-node-top: 4.85rem;
   }
 }

@@ -13,8 +13,8 @@ export default function Home() {
       <main>
         <Hero />
         <Overview />
-        <Autonomy />
         <ScooterDesign />
+        <Autonomy />
         <MobileApp />
       </main>
       <Footer />

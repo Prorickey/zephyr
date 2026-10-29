@@ -11,7 +11,7 @@ const FEATURES = [
 
 export default function MobileApp() {
   return (
-    <Section id="app" variant="dark" fig="Fig. 04" num="04" title="Zephyr Mobile App">
+    <Section id="app" variant="dark" fig="Fig. 04" num="04" title="Zephyr Mobile App" progress={0}>
       <div className={styles.layout}>
         <div>
           <Lede>The remote control you never need to look at twice.</Lede>

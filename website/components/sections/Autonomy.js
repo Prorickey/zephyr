@@ -22,10 +22,11 @@ export default function Autonomy() {
   return (
     <Section
       id="autonomy"
-      variant="dark"
-      fig="Fig. 02"
-      num="02"
+      variant="light"
+      fig="Fig. 03"
+      num="03"
       title="Autonomous AI Implementation"
+      progress={0}
     >
       <Lede>
         A lightweight perception-planning-control loop, tuned to run on hardware that fits

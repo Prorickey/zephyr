@@ -2,8 +2,8 @@
 
 export const NAV_LINKS = [
   { id: 'overview', num: '01', label: 'Project Overview' },
-  { id: 'autonomy', num: '02', label: 'Autonomous AI Implementation' },
-  { id: 'design', num: '03', label: 'Electric Scooter Design' },
+  { id: 'design', num: '02', label: 'Self-Stabilizing Scooter' },
+  { id: 'autonomy', num: '03', label: 'Autonomous AI Implementation' },
   { id: 'app', num: '04', label: 'Zephyr Mobile App' },
 ];
 

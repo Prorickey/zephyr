@@ -1,10 +1,98 @@
+/* ---------- roadmap ---------- */
+
+.phases {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line-dark);
+  border: 1px solid var(--line-dark);
+  margin-top: 2.4rem;
+}
+
+.phase {
+  background: var(--white);
+}
+
+.phaseLink {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  height: 100%;
+  padding: 1.4rem 1.3rem 1.5rem;
+  text-decoration: none;
+  transition: background 0.3s ease;
+}
+
+.phaseLink:hover,
+.phaseLink:focus-visible {
+  background: rgba(10, 10, 10, 0.04);
+}
+
+.phaseHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.phaseNum {
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  color: var(--grey);
+  font-variant-numeric: tabular-nums;
+}
+
+.phaseStatus {
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-dark);
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  color: var(--grey);
+}
+
+.active .phaseStatus {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+}
+
+.phaseTitle {
+  font-size: 1.45rem;
+  line-height: 1.2;
+  font-style: italic;
+}
+
+.meter {
+  position: relative;
+  display: block;
+  height: 2px;
+  background: var(--line-dark);
+}
+
+.meterFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--progress) * 100%);
+  background: var(--black);
+}
+
+.phaseCopy {
+  font-size: 0.95rem;
+  opacity: 0.75;
+}
+
+/* ---------- stats ---------- */
+
 .statGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 1px;
   background: var(--line-dark);
   border: 1px solid var(--line-dark);
-  margin-top: 2.4rem;
+  margin-top: 1.6rem;
 }
 
 .stat {
@@ -25,4 +113,10 @@
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--grey);
+}
+
+@media (max-width: 880px) {
+  .phases {
+    grid-template-columns: 1fr;
+  }
 }

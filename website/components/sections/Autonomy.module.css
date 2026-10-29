@@ -10,7 +10,7 @@
   font-style: italic;
   font-size: 1.3rem;
   margin-bottom: 0.6rem;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-dark);
   padding-bottom: 0.4rem;
 }
 
@@ -30,7 +30,7 @@
   font-size: 0.8rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-dark);
   border-radius: 999px;
   padding: 0.35rem 0.95rem;
   color: var(--grey);
@@ -38,6 +38,6 @@
 }
 
 .tags span:hover {
-  color: var(--white);
-  border-color: var(--white);
+  color: var(--black);
+  border-color: var(--black);
 }

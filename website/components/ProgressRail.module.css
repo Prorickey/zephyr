@@ -1,0 +1,150 @@
+/* Project progress line. Drawn in currentColor so it is white on dark
+   sections and black on light ones; --rail-bg (set by the section tone) fills
+   the hollow nodes of sections not started yet. */
+
+.rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--rail-x, 2rem);
+  width: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.track {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.5px;
+  width: 1px;
+  background: currentColor;
+  opacity: 0.22;
+}
+
+.fill {
+  position: absolute;
+  top: 0;
+  left: -1px;
+  width: 2px;
+  height: calc(var(--progress) * 100%);
+  background: currentColor;
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 1.6s cubic-bezier(0.65, 0, 0.35, 1) 0.15s;
+}
+
+.visible .fill {
+  transform: scaleY(1);
+}
+
+/* Section node, level with the "Fig. 0X" kicker */
+.node {
+  position: absolute;
+  top: var(--rail-node-top, 7.35rem);
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  background: var(--rail-bg, transparent);
+}
+
+.done .node,
+.current .node {
+  background: currentColor;
+}
+
+.num {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  color: var(--grey);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "We are here": a pulsing marker where the fill ends, with a vertical label */
+.now {
+  position: absolute;
+  top: calc(var(--progress) * 100%);
+  left: 0;
+  opacity: 0;
+  transition: opacity 0.6s ease 1.6s;
+}
+
+.visible .now {
+  opacity: 1;
+}
+
+.now::before,
+.now::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.now::after {
+  background: transparent;
+  border: 1.5px solid currentColor;
+  animation: pulse 2.4s ease-out infinite;
+}
+
+.nowLabel {
+  position: absolute;
+  left: 10px;
+  top: 14px;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+
+/* Final state when animations are disabled (?noanim / reduced motion). */
+:global(html[data-noanim]) .fill {
+  transform: scaleY(1);
+}
+
+:global(html[data-noanim]) .now {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transform: scaleY(1);
+  }
+  .now {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 880px) {
+  .num {
+    display: none;
+  }
+
+  .nowLabel {
+    left: 9px;
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+  }
+}

@@ -1,26 +1,239 @@
+/* ---------- phase status + milestones ---------- */
+
+.status {
+  margin: 2.4rem 0 1rem;
+  padding: 1.5rem 1.5rem 1.2rem;
+  border: 1px solid var(--line);
+}
+
+.statusHead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.4rem 1.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.statusTitle {
+  font-size: 1.35rem;
+  font-style: italic;
+}
+
+.statusSep {
+  color: var(--grey);
+  font-style: normal;
+}
+
+.statusValue {
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--grey);
+}
+
+.meter {
+  position: relative;
+  display: block;
+  height: 2px;
+  background: var(--line);
+  margin-bottom: 1.4rem;
+}
+
+.meterFill {
+  position: absolute;
+  inset: 0 50% 0 0;
+  background: var(--white);
+}
+
+.meterFill::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--white);
+}
+
+/* Milestones: a small vertical timeline echoing the page's progress line */
+.milestones {
+  list-style: none;
+}
+
+.milestone {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 1rem;
+  padding: 0 0 1rem 1.9rem;
+}
+
+.milestone:last-child {
+  padding-bottom: 0;
+}
+
+/* connector to the next marker */
+.milestone::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1.05rem;
+  bottom: -0.35rem;
+  width: 1px;
+  background: var(--line);
+}
+
+.milestone:last-child::before {
+  display: none;
+}
+
+.done::before {
+  width: 2px;
+  left: 4.5px;
+  background: var(--white);
+}
+
+.marker {
+  position: absolute;
+  left: 0;
+  top: 0.42rem;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid var(--white);
+  background: var(--black);
+}
+
+.done .marker {
+  background: var(--white);
+}
+
+/* half-filled: in progress */
+.current .marker {
+  background: linear-gradient(90deg, var(--white) 50%, var(--black) 50%);
+  box-shadow: 0 0 0 4px rgba(247, 245, 240, 0.12);
+}
+
+.next .marker {
+  border-color: var(--grey);
+}
+
+.milestoneTitle {
+  font-size: 1.05rem;
+}
+
+.next .milestoneTitle {
+  color: var(--grey);
+}
+
+.milestoneWhen {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--grey);
+  align-self: center;
+}
+
+.current .milestoneWhen {
+  color: var(--black);
+  background: var(--white);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+}
+
+.milestoneCopy {
+  grid-column: 1 / -1;
+  font-size: 0.92rem;
+  opacity: 0.7;
+}
+
+.next .milestoneCopy {
+  opacity: 0.5;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- how it balances ---------- */
+
+.subhead {
+  font-weight: 400;
+  font-size: 0.8rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--grey);
+  margin: 3.2rem 0 1.2rem;
+}
+
+.steps {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.2rem;
+}
+
+.step h4 {
+  font-weight: 400;
+  font-style: italic;
+  font-size: 1.3rem;
+  margin: 0.2rem 0 0.5rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.4rem;
+}
+
+.step p {
+  font-size: 0.96rem;
+  opacity: 0.8;
+}
+
+.stepNum {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  color: var(--grey);
+}
+
+/* ---------- the build ---------- */
+
 .specTable {
   width: 100%;
   border-collapse: collapse;
-  margin: 2rem 0 1.6rem;
+  margin: 0 0 1.6rem;
 }
 
 .specTable th,
 .specTable td {
   text-align: left;
   padding: 0.85rem 0.4rem;
-  border-bottom: 1px solid var(--line-dark);
+  border-bottom: 1px solid var(--line);
   vertical-align: top;
 }
 
 .specTable th {
   font-weight: 400;
   font-style: italic;
-  width: 9.5em;
+  width: 10.5em;
   color: var(--grey);
 }
 
 @media (max-width: 880px) {
+  .status {
+    padding: 1.2rem 1rem 1rem;
+  }
+
+  .steps {
+    grid-template-columns: 1fr;
+    gap: 1.6rem;
+  }
+
   .specTable th {
-    width: 7em;
+    width: 7.5em;
   }
 }

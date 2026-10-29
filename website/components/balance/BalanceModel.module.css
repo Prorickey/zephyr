@@ -1,0 +1,639 @@
+/* Interactive balance model. Sits in a dark section and breaks out of the
+   860px text column on wide screens. */
+
+.model {
+  --model-width: min(1080px, calc(100vw - 10rem));
+  width: var(--model-width);
+  margin: 2.8rem 0 2.4rem calc((100% - var(--model-width)) / 2);
+}
+
+/* ---------- 3D stage ---------- */
+
+.stage {
+  position: relative;
+  height: clamp(380px, 52vw, 600px);
+  border: 1px solid var(--line);
+  background: var(--black);
+  overflow: hidden;
+  /* Vertical swipes still scroll the page; horizontal drags push or orbit. */
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.stage[data-hover='scooter'] {
+  cursor: pointer;
+}
+
+.stage[data-dragging] {
+  cursor: grabbing;
+}
+
+.stage:focus-visible {
+  outline: 1px solid var(--white);
+  outline-offset: 4px;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  text-align: center;
+  font-style: italic;
+  color: var(--grey);
+}
+
+.labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* A zero-size point moved to the projected anchor every frame; the dot sits
+   on it and the text hangs off to one side (data-flip) with a short leader. */
+.anchor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.anchor::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--white);
+  box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.8);
+}
+
+.label {
+  position: absolute;
+  top: -0.6em;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding-left: 10px;
+  font-size: 0.66rem;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--white);
+  text-shadow: 0 0 6px var(--black), 0 0 3px var(--black), 0 0 1px var(--black);
+}
+
+.label::before {
+  content: '';
+  width: 16px;
+  border-top: 1px solid rgba(247, 245, 240, 0.6);
+  flex: none;
+}
+
+.anchor[data-flip='left'] .label {
+  left: auto;
+  right: 0;
+  flex-direction: row-reverse;
+  padding: 0 10px 0 0;
+}
+
+
+.leanLabel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  margin: -1.6em 0 0 0.5em;
+  font-size: 0.8rem;
+  font-style: italic;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--white);
+  text-shadow: 0 0 6px var(--black);
+}
+
+.hud {
+  position: absolute;
+  top: 0.9rem;
+  left: 1rem;
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 1rem;
+  row-gap: 0.1rem;
+  align-items: baseline;
+  padding: 0.6rem 0.8rem;
+  background: rgba(10, 10, 10, 0.72);
+  border: 1px solid var(--line);
+  pointer-events: none;
+}
+
+.hud dt {
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--grey);
+}
+
+.hud dd {
+  font-size: 0.86rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.corner {
+  position: absolute;
+  top: 0.9rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.status {
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem 0.3rem 0.7rem;
+  background: rgba(10, 10, 10, 0.72);
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  pointer-events: none;
+}
+
+.status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--white);
+}
+
+.stage[data-mode='limit'] .status,
+.stage[data-mode='fallen'] .status {
+  background: var(--white);
+  color: var(--black);
+}
+
+.stage[data-mode='limit'] .status::before,
+.stage[data-mode='fallen'] .status::before {
+  background: var(--black);
+}
+
+.stage[data-mode='off'] .status::before {
+  background: transparent;
+  border: 1px solid var(--white);
+}
+
+.views {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.72);
+  overflow: hidden;
+}
+
+.viewBtn {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  padding: 0.3rem 0.75rem;
+  color: var(--grey);
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.viewBtn:hover {
+  color: var(--white);
+}
+
+.viewBtn[aria-pressed='true'] {
+  background: var(--white);
+  color: var(--black);
+}
+
+.hint {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 0.75rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: var(--grey);
+  pointer-events: none;
+}
+
+/* No arrow keys to press on a touch screen */
+@media (hover: none) {
+  .hintKeys {
+    display: none;
+  }
+}
+
+/* Shown once the scooter has fallen over. */
+.fall {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 22rem;
+  padding: 1.2rem 1.4rem;
+  text-align: center;
+  font-size: 1.15rem;
+  font-style: italic;
+  background: rgba(10, 10, 10, 0.86);
+  border: 1px solid var(--white);
+}
+
+.fallNote {
+  font-size: 0.85rem;
+  font-style: normal;
+  color: var(--grey);
+  margin-bottom: 0.4rem;
+}
+
+.stage[data-mode='fallen'] .fall {
+  display: flex;
+}
+
+/* ---------- strip chart ---------- */
+
+.chart {
+  border: 1px solid var(--line);
+  border-top: 0;
+  padding: 0.7rem 1rem 0.8rem;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.4rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey);
+  margin-bottom: 0.4rem;
+}
+
+.keyLean::before,
+.keySpeed::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  vertical-align: middle;
+  margin: -2px 0.5em 0 0;
+  border-top: 1.5px solid var(--white);
+}
+
+.keySpeed::before {
+  border-top: 1.5px dashed var(--grey);
+}
+
+.keyTime {
+  margin-left: auto;
+}
+
+.chartCanvas {
+  display: block;
+  width: 100%;
+  height: 96px;
+}
+
+/* ---------- panels: control law + controls ---------- */
+
+.panels {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  border: 1px solid var(--line);
+  border-top: 0;
+}
+
+.law,
+.controls {
+  min-width: 0;
+  padding: 1.3rem 1.3rem 1.4rem;
+}
+
+.controls {
+  border-left: 1px solid var(--line);
+}
+
+.panelTitle {
+  font-weight: 400;
+  font-style: italic;
+  font-size: 1.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.panelNote {
+  font-size: 0.86rem;
+  opacity: 0.72;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.math {
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.lawTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lawTable th,
+.lawTable td {
+  padding: 0.42rem 0.3rem;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.lawTable thead th {
+  font-weight: 400;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--grey);
+}
+
+.lawTable th:first-child {
+  text-align: left;
+  font-weight: 400;
+}
+
+.lawTable tfoot th,
+.lawTable tfoot td {
+  border-bottom: 0;
+  border-top: 1px solid var(--white);
+}
+
+.unit {
+  font-size: 0.72rem;
+  color: var(--grey);
+}
+
+.barCell {
+  width: 30%;
+  min-width: 80px;
+}
+
+/* Centered bar: the fill grows left or right of the midline. */
+.bar {
+  position: relative;
+  display: block;
+  height: 8px;
+}
+
+.bar::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: var(--grey);
+}
+
+.barFill {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  background: var(--white);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.6rem 0 0.4rem;
+}
+
+.btn {
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.38rem 0.95rem;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.btn:hover {
+  border-color: var(--white);
+}
+
+.btn:active {
+  background: var(--white-faint);
+}
+
+.btn[aria-pressed='true'] {
+  background: var(--white);
+  color: var(--black);
+  border-color: var(--white);
+}
+
+.btn:focus-visible,
+.viewBtn:focus-visible {
+  outline: 1px solid var(--white);
+  outline-offset: 2px;
+}
+
+.slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  row-gap: 0.15rem;
+  margin-top: 0.9rem;
+  font-size: 0.86rem;
+}
+
+.sliderName {
+  opacity: 0.85;
+}
+
+.sliderValue {
+  font-variant-numeric: tabular-nums;
+  color: var(--grey);
+}
+
+.slider input {
+  grid-column: 1 / -1;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  height: 18px;
+  cursor: pointer;
+}
+
+.slider input::-webkit-slider-runnable-track {
+  height: 1px;
+  background: var(--white);
+}
+
+.slider input::-moz-range-track {
+  height: 1px;
+  background: var(--white);
+}
+
+.slider input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--black);
+  border: 1.5px solid var(--white);
+}
+
+.slider input::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--black);
+  border: 1.5px solid var(--white);
+}
+
+.slider input:focus-visible {
+  outline: 1px solid var(--white);
+  outline-offset: 2px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: space-between;
+  column-gap: 1rem;
+  row-gap: 0.25rem;
+  margin-top: 1.2rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.84rem;
+}
+
+.facts dt {
+  color: var(--grey);
+}
+
+.facts dd {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.caption {
+  margin-top: 0.9rem;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--grey);
+  max-width: 52em;
+}
+
+@media (max-width: 880px) {
+  .model {
+    --model-width: 100%;
+  }
+
+  .stage {
+    height: clamp(380px, 115vw, 520px);
+  }
+
+  .hud {
+    top: 0.6rem;
+    left: 0.6rem;
+    padding: 0.45rem 0.6rem;
+    column-gap: 0.7rem;
+  }
+
+  .hud dt:nth-of-type(n + 4),
+  .hud dd:nth-of-type(n + 4) {
+    display: none;
+  }
+
+  .corner {
+    top: 0.6rem;
+    right: 0.6rem;
+  }
+
+  .hint {
+    left: 0.6rem;
+    right: 0.6rem;
+    bottom: 0.5rem;
+    font-size: 0.68rem;
+  }
+
+  .panels {
+    grid-template-columns: 1fr;
+  }
+
+  .controls {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .law,
+  .controls {
+    padding: 1.1rem 1rem 1.2rem;
+  }
+
+  .law {
+    overflow-x: auto;
+  }
+
+  .lawTable {
+    font-size: 0.8rem;
+  }
+
+  .lawTable th,
+  .lawTable td {
+    padding: 0.4rem 0.15rem;
+  }
+
+  .unit {
+    display: none;
+  }
+
+  .barCell {
+    width: 18%;
+    min-width: 40px;
+  }
+
+  .label {
+    font-size: 0.58rem;
+  }
+
+  .label::before {
+    width: 10px;
+  }
+}
