@@ -42,7 +42,7 @@ SCOOTER_PACK_POWER = 1.5 * 350  # (W) no peak power is published; compare.py's 1
 # published (phase vs line-to-line unstated), 100 A max, 1.08 kg, rated 6-18S. It isn't its own flywheel, so it
 # drives compare.py's current flywheel: 3 kg rim-weighted, r = 0.15 m, I_w = 0.9 m r^2.
 MOTOR = dict(
-    motor_kt=0.08681, motor_resistance=0.055, motor_max_current=100.0, motor_mass=1.08,
+    motor_kt=0.08681, motor_resistance=0.055, motor_max_current=30.0, motor_mass=1.08,
     reaction_wheel_mass=3.0, reaction_wheel_radius=0.15, reaction_wheel_inertia=0.9 * 3.0 * 0.15**2,
 )
 

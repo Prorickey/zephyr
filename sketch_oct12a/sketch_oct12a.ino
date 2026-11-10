@@ -37,7 +37,7 @@ bool pitchMotorControl = true;
 double pitch = 0;
 double alpha = 0.98;
 
-double duty = 0.30;
+double duty = 0.40;
 
 bool ledStatus = false;
 unsigned long lastLEDChange = 0;
@@ -63,7 +63,7 @@ void loop() {
     motorDirectionLastChange = millis();
   }
 
-  if(pitchMotorControl) vesc.setDuty(pitch / 180.0);
+  if(pitchMotorControl) vesc.setDuty(2.0*pitch / 45.0);
   else if(direction) vesc.setDuty(-duty);
   else vesc.setDuty(duty);
 
