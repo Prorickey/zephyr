@@ -26,16 +26,19 @@
  *      COUNTER-CLOCKWISE, the same way the frame turns when it leans left (positive lean), and the frame
  *      should kick the other way, to the right. If the wheel spins clockwise, flip MOTOR_SIGN. Go by what you
  *      see: "w" reads positive in this test either way, because MOTOR_SIGN flips the command and the reading.
- *   4. Hold the scooter at its balance point (where it neither falls left nor right) and send 'z' to save that
- *      as zero lean. It is stored in flash. Be careful: in rwps_lqr.py a zero that is 1 deg off still balances,
- *      but 2 deg off falls over.
+ *   4. Set the zero lean. Send 'o' to use MEASURED_BALANCE_DEG (from the system_id fall tests, the accurate way),
+ *      or hold the scooter at its balance point and send 'z'. Either is stored in flash. The balance point
+ *      moves when the handlebars turn or something hangs off one side, so keep the setup the same as when it
+ *      was measured. With K_LQR below, rwps_lqr.py still balances with the zero 1.5 deg off (the wheel-speed
+ *      feedback leans it back to the true balance point) but recovers from only ~1.75 deg at 30 A.
  *   5. Send 'a' to arm (or press the BOOT button). Bring it upright; once it is within ARM_ANGLE_DEG for
  *      ARM_HOLD_MS it starts balancing. Send 'x' / space (or press BOOT) to stop at any time.
  * In the VESC Tool: enable UART at 115200 baud, set the motor current limit to the 30 A the Python assumes,
  * and keep the app timeout short (e.g. 200 ms) so the motor releases if the ESP32 stops talking.
  * ---------------------------------------------------------------------------------------------------------
  *
- * Serial commands: a arm | x or space disarm | z zero lean here | m motor direction test | p telemetry on/off
+ * Serial commands: a arm | x or space disarm | z zero lean here | o zero = MEASURED_BALANCE_DEG
+ *                  m motor direction test | p telemetry on/off
  *                  k print gains | g / G gains -10% / +10% | d / D damping -10% / +10% | r reset g and d to 1.0
  *                  (g, d and the lean offset are saved in flash)
  */
@@ -53,9 +56,12 @@
 #define VESC_BAUD     115200
 
 // --------------------------------------------- controller -----------------------------------------------
-// From simulators/rwps_lqr.py: LOOP_PERIOD = 0.005 s, Bryson's-rule Q/R, motor_max_current = 30 A.
+// From simulators/rwps_lqr.py with the parameters MEASURED by system_id on 2026-11-21 (I_w = 0.00859,
+// K_t = 0.0731, J = 2.58, Mg = 42.2), LOOP_PERIOD = 0.005 s, R_V = 1/1^2, motor_max_current = 30 A.
 // Units: V/rad, V/(rad/s), V/rad, V/(rad/s). u = -(K0 theta + K1 theta_dot + K2 phi + K3 omega)
-const float K_LQR[4] = {-245.225f, -48.2777f, -0.0462526f, -0.251858f};
+// The previous gains {-245.225, -48.2777, -0.0462526, -0.251858} were designed for a 3 kg / 0.061 kg m^2 wheel and
+// are UNSTABLE on the 1 kg wheel actually built (in simulation it falls within ~1 s even with perfect sensors).
+const float K_LQR[4] = {-247.852f, -61.0004f, -0.00779613f, -0.149401f};
 const uint32_t LOOP_PERIOD_US = 5000;           // must match LOOP_PERIOD in rwps_lqr.py
 const float LOOP_PERIOD_S = LOOP_PERIOD_US * 1e-6f;
 
@@ -69,9 +75,11 @@ const float MAX_DUTY = 0.95f;                   // |duty| cap, so |u| <= MAX_DUT
 //          (at 0.055 ohm every 0.1 V of error in duty mode is ~2 A of unintended current).
 //   false: send u as duty = u / V_battery, the original behavior.
 const bool CONTROL_BY_CURRENT = true;
-const float MOTOR_KE = 0.08681f;                // (V/(rad/s)) = K_t, motor_kt in rwps_lqr.py
+const float MOTOR_KE = 0.07308f;                // (V/(rad/s)) = K_t, motor_kt in rwps_lqr.py (measured: VESC flux linkage)
 const float MOTOR_RESISTANCE = 0.055f;          // (ohm) motor_resistance in rwps_lqr.py
-const float MAX_CURRENT_A = 30.0f;              // motor_max_current in rwps_lqr.py. Keep the VESC Tool limit >= this
+const float MAX_CURRENT_A = 30.0f;              // motor_max_current in rwps_lqr.py. Keep the VESC Tool limit >= this.
+                                                // Raising it doesn't change K, only the margin: 45 A recovers from
+                                                // ~2.75 deg instead of ~1.75 in rwps_lqr.py (VESC limit is ~101 A)
 
 // Soft start: the gains ramp from 0 to full over this long when balancing begins. In rwps_lqr.py this halves
 // the startup current kick from a 0.5 deg start (30 A -> 12.5 A) with only ~0.01 deg more lean. Much longer
@@ -81,7 +89,7 @@ const float SOFT_START_S = 0.3f;
 // --------------------------------------------- sign / mapping --------------------------------------------
 // See the sign checks in the header. These map the raw sensors onto the model's conventions.
 const float LEAN_ACCEL_SIGN = -1.0f;            // sketch_oct12a used atan2(-ay, ...)
-const float LEAN_GYRO_SIGN  = +1.0f;            // sketch_oct12a integrated +gx
+const float LEAN_GYRO_SIGN  = -1.0f;            // was +1: measured 2026-11-21, the gyro read negative leaning left
 const float MOTOR_SIGN      = +1.0f;            // +1 if positive VESC duty / current spins the wheel CCW viewed from behind
 const float MOTOR_POLE_PAIRS = 7.0f;            // Flipsky 7070: 14 poles. VESC reports electrical RPM
 
@@ -89,14 +97,28 @@ const float MOTOR_POLE_PAIRS = 7.0f;            // Flipsky 7070: 14 poles. VESC 
 // Complementary filter time constant. Longer trusts the gyro more, which rejects the accelerometer's false
 // "tilt" from the frame's own lean acceleration and wheel vibration, but corrects gyro drift more slowly.
 const float FILTER_TAU_S = 0.5f;
+// system_id (2026-11-21) found the accelerometer unreliable while the wheel works hard: its average lean shifts
+// 1-2 deg above ~1000 rpm (flywheel imbalance) and it spikes with every current pulse. The filter coasts on the
+// gyro alone (bias ~0.02 dps, so ~0.1 deg per 5 s) whenever any of these is true:
+const float ACCEL_TRUST_MAX_RPM = 1000.0f;      // wheel faster than this
+const float ACCEL_TRUST_MAX_AMPS = 10.0f;       // motor current above this
+const float ACCEL_TRUST_MAX_G_ERR = 0.05f;      // |accel magnitude - 1 g| above this (it's being shaken)
+// 2nd-order low-pass on the lean rate the controller sees (not on the rate the filter integrates). The gyro picks
+// up the flywheel's imbalance at rpm/60 Hz and a ~50 Hz frame resonance; at 20 Hz the noise current through K1
+// drops ~3x. rwps_lqr-style simulation with this filter and 10 ms of actuator lag: still stable.
+const float RATE_FILTER_HZ = 20.0f;
+// Balance point measured by the system_id fall tests (accelerometer frame, same signs as here). Applied with 'o'.
+// 14 falls on 2026-11-21 gave +2.5 deg (+/-0.3); 5 earlier falls the same day gave +1.0, so something about the
+// setup (handlebar angle? cable?) moved it by ~1.5 deg. Remeasure if the setup changes.
+const float MEASURED_BALANCE_DEG = 2.5f;
 
 // ----------------------------------------------- safety -------------------------------------------------
-// rwps_lqr.py recovers from a 2.0 deg start but falls from 2.5 deg (only ~2.6 Nm at 30 A), so arm well inside
+// rwps_lqr.py (measured parameters) recovers from a ~1.75 deg start at 30 A (2.19 Nm peak), so arm well inside
 const float ARM_ANGLE_DEG = 1.0f;               // must be this close to upright to start balancing
 const float ARM_RATE_DPS = 5.0f;                // ... and this still (deg/s)
 const uint32_t ARM_HOLD_MS = 500;               // ... for this long
-const float FALL_ANGLE_DEG = 20.0f;             // beyond this it can't recover (peak torque ~2.6 Nm), give up
-const float MAX_WHEEL_RPM = 3700.0f;            // no-load is ~3960 rpm at 36 V; past this there's no torque left
+const float FALL_ANGLE_DEG = 20.0f;             // beyond this it can't recover (peak torque ~2.2 Nm), give up
+const float MAX_WHEEL_RPM = 3700.0f;            // the light wheel reaches this in ~1.5 s at 30 A; little torque left past it
 const uint32_t TELEMETRY_TIMEOUT_MS = 100;      // VESC silent this long -> disarm
 const int MAX_IMU_ERRORS = 5;                   // consecutive failed IMU reads -> disarm
 const float MOTOR_TEST_VOLTS = 3.0f;            // duty mode
@@ -246,6 +268,23 @@ float theta = 0.0f, thetaDot = 0.0f, phi = 0.0f, omega = 0.0f;
 float u = 0.0f;             // (V) last LQR command
 float iCmd = 0.0f;          // (A) last commanded current (current mode)
 bool filterSeeded = false;
+bool accelTrusted = true;
+
+// 2nd-order Butterworth low-pass (bilinear transform), for the lean rate
+struct LowPass2 {
+  float b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  void design(float fc, float fs) {
+    float k = tanf(PI * fc / fs), n = 1.0f / (1.0f + M_SQRT2 * k + k * k);
+    b0 = k * k * n; b1 = 2 * b0; b2 = b0;
+    a1 = 2.0f * (k * k - 1.0f) * n; a2 = (1.0f - M_SQRT2 * k + k * k) * n;
+  }
+  float step(float x) {
+    float y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+    x2 = x1; x1 = x; y2 = y1; y1 = y;
+    return y;
+  }
+};
+LowPass2 rateFilter;
 
 // Live tuning, saved in flash. gainScale multiplies all of K ("how hard"), dampScale multiplies K1 on top
 // ("how much it resists lean rate"). Both 1.0 = exactly the rwps_lqr.py design.
@@ -350,18 +389,25 @@ void controlStep(float dt) {
     return;
   }
   imuErrors = 0;
-  accLean = leanAccel(IMU.accX(), IMU.accY(), IMU.accZ());
-  thetaDot = leanRate(IMU.gyrX());
+  float ax = IMU.accX(), ay = IMU.accY(), az = IMU.accZ();
+  accLean = leanAccel(ax, ay, az);
+  float rawRate = leanRate(IMU.gyrX());
+  thetaDot = rateFilter.step(rawRate);   // what the controller sees: low-passed against vibration
+
+  // --- wheel speed and angle (relative to the frame) ---
+  omega = MOTOR_SIGN * vesc::erpm / MOTOR_POLE_PAIRS * TWO_PI / 60.0f;
+
+  // --- lean: integrate the raw gyro, pull toward the accelerometer only while it can be trusted ---
   if (!filterSeeded) {
     lean = accLean;
     filterSeeded = true;
   }
-  float alpha = FILTER_TAU_S / (FILTER_TAU_S + dt);
-  lean = alpha * (lean + thetaDot * dt) + (1.0f - alpha) * accLean;
+  float gErr = fabsf(sqrtf(ax * ax + ay * ay + az * az) - 1.0f);
+  accelTrusted = fabsf(omega) * 60.0f / TWO_PI < ACCEL_TRUST_MAX_RPM && fabsf(vesc::motorCurrent) < ACCEL_TRUST_MAX_AMPS &&
+                 gErr < ACCEL_TRUST_MAX_G_ERR;
+  float alpha = accelTrusted ? FILTER_TAU_S / (FILTER_TAU_S + dt) : 1.0f;
+  lean = alpha * (lean + rawRate * dt) + (1.0f - alpha) * accLean;
   theta = lean - leanOffset;
-
-  // --- wheel speed and angle (relative to the frame) ---
-  omega = MOTOR_SIGN * vesc::erpm / MOTOR_POLE_PAIRS * TWO_PI / 60.0f;
   float vBattery = vesc::inputVoltage > 5.0f ? vesc::inputVoltage : NOMINAL_PACK_VOLTAGE;
   float vMax = MAX_DUTY * vBattery;
   float thetaDeg = theta * RAD_TO_DEG;
@@ -429,6 +475,12 @@ void handleCommand(char c) {
     case 'x': case ' ':
       setMode(DISARMED);
       break;
+    case 'o':
+      if (mode != DISARMED) { Serial.println("Disarm before zeroing"); break; }
+      leanOffset = MEASURED_BALANCE_DEG * DEG_TO_RAD;
+      prefs.putFloat("lean_off", leanOffset);
+      Serial.printf("Lean offset set to the measured balance point, %.2f deg\n", MEASURED_BALANCE_DEG);
+      break;
     case 'z':
       if (mode != DISARMED) { Serial.println("Disarm before zeroing"); break; }
       leanOffset = lean;
@@ -487,10 +539,11 @@ void printTelemetry() {
   if (!telemetryOn || millis() - lastPrintMs < 50) return;
   lastPrintMs = millis();
   static const char *names[] = {"OFF", "WAIT", "BAL", "TEST"};
-  Serial.printf("%s th=%.2f acc=%.2f rate=%.1f deg/s w=%.0frpm phi=%.1frev u=%.2fV I=%.1fA vin=%.1f tick=%luus ovr=%lu%s\n",
+  Serial.printf("%s th=%.2f acc=%.2f rate=%.1f deg/s w=%.0frpm phi=%.1frev u=%.2fV I=%.1fA vin=%.1f tick=%luus ovr=%lu%s%s\n",
                 names[mode], theta * RAD_TO_DEG, (accLean - leanOffset) * RAD_TO_DEG, thetaDot * RAD_TO_DEG,
                 omega * 60.0f / TWO_PI, phi / TWO_PI, u, vesc::motorCurrent, vesc::inputVoltage,
-                (unsigned long)lastTickDurationUs, (unsigned long)overruns, vesc::fresh() ? "" : " [no VESC]");
+                (unsigned long)lastTickDurationUs, (unsigned long)overruns, vesc::fresh() ? "" : " [no VESC]",
+                accelTrusted ? "" : " [gyro only]");
 }
 
 // ------------------------------------------------ setup / loop --------------------------------------------
@@ -522,8 +575,12 @@ void setup() {
   gainScale = prefs.getFloat("gain", 1.0f);
   dampScale = prefs.getFloat("damp", 1.0f);
 
-  Serial.println("Zephyr LQR balance ready. Commands: a arm | x disarm | z zero lean | m motor test | p telemetry | k gains | g/G gain | d/D damping | r reset");
+  rateFilter.design(RATE_FILTER_HZ, 1.0f / LOOP_PERIOD_S);
+  Serial.println("Zephyr LQR balance ready. Commands: a arm | x disarm | z zero lean | o measured zero | m motor test | p telemetry | k gains | g/G gain | d/D damping | r reset");
   printGains();
+  Serial.printf("Measured balance point is %.2f deg: send 'o' to use it as the zero\n", MEASURED_BALANCE_DEG);
+  if (gainScale != 1.0f || dampScale != 1.0f)
+    Serial.println("NOTE: gain/damping scales saved in flash aren't 1.0, so K is scaled. Send 'r' to use K as designed.");
 
   lastTickUs = micros();
   nextTickUs = lastTickUs + LOOP_PERIOD_US;

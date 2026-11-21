@@ -29,10 +29,14 @@ from rwps_v2 import ScooterReversePendulumReactionWheel
 # ~44 in (1.118 m) unfolded height from the VOLPAM Q1 manual, 280.8 Wh pack from a VOLPAM 36 V 7.8 Ah listing.
 # The mass split is compare.py's scooter_kwargs() model for those numbers: 2.0 kg handlebars at L_1, a stem/fork
 # rod of 19% of net weight, a 2.0 kg deck battery, and the rest lumped just above the axles.
+#
+# MEASURED 2026-11-21 with system_id/ (19 fall tests, 3 wheel tests, VESC FOC detection): total Mg = 42.23 N m and
+# J = 2.582 kg m^2 (the model had 59.11 and 3.948). frame_moment and frame_inertia are those totals minus the
+# wheel + motor (2.09 kg at 0.3 m). handlebar_mass / body_mass / body_com_height are now only used for drawing.
 SCOOTER = dict(
     handlebar_mass=2.0, body_mass=11.6, stem_length=1.088, body_com_height=0.226,
-    frame_moment=4.801,      # (kg*m) m_a h_a
-    frame_inertia=3.581,     # (kg*m^2) I_a
+    frame_moment=3.678,      # (kg*m) m_a h_a. Was 4.801 (estimated)
+    frame_inertia=2.394,     # (kg*m^2) I_a. Was 3.581 (estimated)
     reaction_wheel_height=0.3,
 )
 SCOOTER_PACK_VOLTAGE = 36.0     # (V) 10S
@@ -41,9 +45,14 @@ SCOOTER_PACK_POWER = 1.5 * 350  # (W) no peak power is published; compare.py's 1
 # Flipsky 7070 Battle Hardened KV110 (motors.json flipsky_7070_110kv): K_t = 60 / (2 pi 110), 0.055 ohm as
 # published (phase vs line-to-line unstated), 100 A max, 1.08 kg, rated 6-18S. It isn't its own flywheel, so it
 # drives compare.py's current flywheel: 3 kg rim-weighted, r = 0.15 m, I_w = 0.9 m r^2.
+#
+# MEASURED 2026-11-21: K_t = 1.5 x 7 pole pairs x 6.96 mWb (VESC FOC detection) = 0.0731 N m/A, not 60/(2 pi KV).
+# The flywheel actually built is ReactionFlywheelFinal.dxf: 1.01 kg, 228.6 mm diameter, radius of gyration
+# 89.4 mm. The wheel tests measured I_w = 0.00859 kg m^2 including the motor can (the DXF predicts ~0.0085).
+# The 3 kg / 300 mm wheel in reaction_wheel_cad_spec.md would be 0.061, about 7x more.
 MOTOR = dict(
-    motor_kt=0.08681, motor_resistance=0.055, motor_max_current=30.0, motor_mass=1.08,
-    reaction_wheel_mass=3.0, reaction_wheel_radius=0.15, reaction_wheel_inertia=0.9 * 3.0 * 0.15**2,
+    motor_kt=0.07308, motor_resistance=0.055, motor_max_current=30.0, motor_mass=1.08,
+    reaction_wheel_mass=1.01, reaction_wheel_radius=0.1143, reaction_wheel_inertia=0.00859,
 )
 
 # Controller
@@ -54,7 +63,8 @@ Q_THETA = 1 / math.radians(2)**2     # 2 degrees of lean
 Q_THETA_DOT = 1 / 0.5**2             # 0.5 rad/s of lean rate
 Q_PHI = 1 / (2 * math.pi * 20)**2    # 20 turns of wheel angle drift
 Q_OMEGA = 1 / 300.0**2               # 300 rad/s of wheel speed
-R_V = 1 / 6.0**2                     # 6 V of command. At 0.055 ohm, 100 A is reached by only ~5.5 V over back-EMF
+R_V = 1 / 1.0**2                     # 1 V of command (~18 A at 0.055 ohm). Was 6 V; 1 V gives the least noise current
+                                     # with the measured plant (system_id, 2026-11-21) at about the same stiffness
 
 # Disturbance
 PUSH_FORCE = 4.0                # (N) starting push strength, applied horizontally at the handlebars. Holding
